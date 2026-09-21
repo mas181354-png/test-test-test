@@ -33,12 +33,13 @@ nav button.on{background:#fff;color:#2563eb}
 @keyframes sp{to{transform:rotate(360deg)}}
 .pasteerr{max-width:640px;background:#fee2e2;border:2px solid #ef4444;color:#7f1d1d;border-radius:14px;padding:18px 22px;font:600 14px 'Inter';line-height:1.5}
 </style>
+<style id="dynW">.namecol{min-width:300px;max-width:300px}.namecol .campname{max-width:none}</style>
 </head>
 <body>
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 <div class="wrap">
   <header class="glass">
-    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v4</span></div>
+    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v5</span></div>
     <nav id="nav">
       <button data-tab="agg" class="on">Aggregates</button>
       <button data-tab="ports">Portfolios</button>
@@ -180,6 +181,20 @@ tr.grp td{background:linear-gradient(90deg,rgba(37,99,235,.16),rgba(14,165,233,.
 .dim{color:var(--mut);font-size:10.5px}
 .campname{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
 
+/* ---------- portfolio cards ---------- */
+.pcard{margin-bottom:16px;overflow:hidden;padding:0}
+.phead{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline;padding:12px 16px;
+  background:linear-gradient(90deg,rgba(37,99,235,.16),rgba(14,165,233,.06))}
+.phead .pname{font:800 13px 'Inter';color:#1e3a8a;max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.phead .pstat{font:600 11px 'Inter';color:#334155}
+.phead .pstat b{color:#0f2c5f;font-size:12px}
+/* ---------- draggable name column ---------- */
+.grip{cursor:col-resize;user-select:none;opacity:.75;padding:0 4px;font-weight:900}
+.grip:hover{opacity:1}
+/* ---------- match chips ---------- */
+.mchip{display:inline-block;padding:2px 9px;border-radius:999px;font:600 10.5px 'Inter';
+  background:#e0eaff;color:#1d4ed8}
+.mchip.pt{background:#ede9fe;color:#6d28d9}
 /* ---------- filters bar ---------- */
 .fbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;margin-bottom:12px}
 .fbar select,.fbar input{border:1px solid #dbeafe;background:#fff;border-radius:8px;
@@ -775,18 +790,18 @@ var S = {
   raw:null, model:null, tab:'agg',
   selPorts:[], selKeys:[],
   cf:[], tf:[], csearch:'', tsearch:'', cview:'port', tclass:'all', goals:null,
-  pf:[], psearch:'', psort:{k:'spend',dir:-1}, ptype:'all', pclosed:{},
+  pf:[], psearch:'', psort:{k:'spend',dir:-1}, ptype:'all', pclosed:{}, nameW:300,
   csort:{k:'spend',dir:-1}, tsort:{k:'spend',dir:-1},
   heat:false
 };
 try{
   var saved = JSON.parse(localStorage.getItem('ppcApp')||'{}');
-  ['tab','selPorts','selKeys','heat','cview','tclass'].forEach(function(k){ if(saved[k]!==undefined) S[k]=saved[k]; });
+  ['tab','selPorts','selKeys','heat','cview','tclass','nameW'].forEach(function(k){ if(saved[k]!==undefined) S[k]=saved[k]; });
   if(['agg','ports','camps','plc','tgts','spa','sba','sda'].indexOf(S.tab)<0) S.tab='agg';
 }catch(e){}
 function persist(){
   try{ localStorage.setItem('ppcApp', JSON.stringify(
-    {tab:S.tab, selPorts:S.selPorts, selKeys:S.selKeys, heat:S.heat, cview:S.cview, tclass:S.tclass})); }catch(e){}
+    {tab:S.tab, selPorts:S.selPorts, selKeys:S.selKeys, heat:S.heat, cview:S.cview, tclass:S.tclass, nameW:S.nameW})); }catch(e){}
 }
 
 /* ---------------- formatting ---------------- */
@@ -821,6 +836,7 @@ function onData(json){
   document.getElementById('stamp').textContent =
     'Data loaded ' + new Date().toLocaleTimeString() +
     (payload.generatedAt ? '' : '');
+  applyNameW();
   renderControls(); render();
 }
 function load(){
@@ -906,6 +922,7 @@ document.querySelectorAll('#nav button').forEach(function(b){
   b.classList.toggle('on', b.getAttribute('data-tab')===S.tab);
 });
 
+var OPWORD = {'>':'greater than','<':'less than','=':'equals','≥':'at least','≤':'at most','≠':'not equal'};
 /* ---------------- share heat shading ---------------- */
 function shBg(v){
   if (v===null||v===undefined) return '';
@@ -913,6 +930,32 @@ function shBg(v){
   var a = (0.05 + 0.75*i).toFixed(3);
   return ' style="background:rgba(37,99,235,'+a+');color:'+(i>0.5?'#fff':'#0f2c5f')+'"';
 }
+
+/* ---------------- draggable name-column width ---------------- */
+function applyNameW(){
+  var st = document.getElementById('dynW');
+  var w = Math.max(140, Math.min(700, S.nameW||300));
+  if (st) st.textContent = '.namecol{min-width:'+w+'px;max-width:'+w+'px}.namecol .campname{max-width:none}';
+}
+(function(){
+  var startX=0, startW=0, active=false;
+  document.addEventListener('mousedown', function(e){
+    var g = e.target.closest('.grip'); if(!g) return;
+    e.preventDefault(); e.stopPropagation();
+    active=true; window.__resizing=true; startX=e.clientX; startW=S.nameW||300;
+    document.body.style.cursor='col-resize';
+  }, true);
+  document.addEventListener('mousemove', function(e){
+    if(!active) return;
+    S.nameW = startW + (e.clientX-startX); applyNameW();
+  });
+  document.addEventListener('mouseup', function(){
+    if(!active) return;
+    active=false; document.body.style.cursor='';
+    persist();
+    setTimeout(function(){ window.__resizing=false; }, 50);
+  });
+})();
 
 /* ---------------- Google-Sheets-like header menu ---------------- */
 var MENU = {key:null, ctx:null, label:''};
@@ -928,12 +971,15 @@ function ensureMenu(){
   return m;
 }
 function openColMenu(th, key, label, ctx){
+  if (window.__resizing) return;
   var m = ensureMenu();
   MENU.key=key; MENU.ctx=ctx; MENU.label=label;
   m.innerHTML = '<button data-a="desc">↓&nbsp; Sort high → low</button>'+
     '<button data-a="asc">↑&nbsp; Sort low → high</button>'+
-    '<div class="cond"><select id="cmOp"><option>&gt;</option><option>&lt;</option><option>=</option>'+
-    '<option>≥</option><option>≤</option><option>≠</option></select>'+
+    '<div class="cond"><select id="cmOp" style="width:120px">'+
+    '<option value="&gt;">greater than</option><option value="&lt;">less than</option>'+
+    '<option value="=">equals</option><option value="≥">at least</option>'+
+    '<option value="≤">at most</option><option value="≠">not equal</option></select>'+
     '<input id="cmVal" type="number" step="any" placeholder="value">'+
     '<button data-a="apply">Filter</button></div>'+
     '<button data-a="clear" style="margin-top:6px;color:#b91c1c">✕&nbsp; Clear filters on '+esc(label)+'</button>';
@@ -1007,29 +1053,16 @@ function sortRows(rows, sort){
   });
 }
 function fbarHTML(id, cols, filters, searchVal, heatToggle){
-  var opts = cols.map(function(c){ return '<option value="'+c[0]+'">'+c[1]+'</option>'; }).join('');
   var chips = filters.map(function(f,i){
-    return '<span class="fchip">'+f.label+' '+f.op+' '+f.v+' <b data-i="'+i+'">✕</b></span>';
+    return '<span class="fchip">'+f.label+' '+(OPWORD[f.op]||f.op)+' '+f.v+' <b data-i="'+i+'">✕</b></span>';
   }).join('');
   return '<div class="fbar glass" id="'+id+'">' +
-    '<input class="txt" placeholder="🔍 Search…" value="'+esc(searchVal)+'">' +
-    '<select class="fcol">'+opts+'</select>' +
-    '<select class="fop"><option>&gt;</option><option>&lt;</option><option>=</option><option>≥</option><option>≤</option><option>≠</option></select>' +
-    '<input class="val" type="number" step="any" placeholder="value">' +
-    '<button class="hbtn fadd">+ Add filter</button>' + chips +
+    '<input class="txt" placeholder="🔍 Search…" value="'+esc(searchVal)+'">' + chips +
     (heatToggle?'<span class="spacer"></span><label class="tgl"><input type="checkbox" class="heat" '+(S.heat?'checked':'')+'> Keyword rank heatmap</label>':'') +
     '</div>';
 }
 function wireFbar(id, filters, cols, onChange, onSearch, onHeat){
   var el = document.getElementById(id);
-  el.querySelector('.fadd').onclick = function(){
-    var k = el.querySelector('.fcol').value;
-    var op = el.querySelector('.fop').value;
-    var v = parseFloat(el.querySelector('.val').value);
-    if (isNaN(v)) return;
-    var lab=''; cols.forEach(function(c){ if(c[0]===k) lab=c[1]; });
-    filters.push({k:k,op:op,v:v,label:lab}); onChange();
-  };
   el.querySelectorAll('.fchip b').forEach(function(b){
     b.onclick=function(){ filters.splice(+this.getAttribute('data-i'),1); onChange(); };
   });
@@ -1051,7 +1084,8 @@ function thRow(cols, sort, extra, fz){
     var arr = sort.k===c[0] ? ' <span class="arr">'+(sort.dir<0?'▼':'▲')+'</span>':'';
     var cls = (c[3]==='l'?'l ':'') + ((fz && fz[c[0]]) ? fz[c[0]] : '');
     var st = (fz && fz[c[0]+'_st']) ? ' style="'+fz[c[0]+'_st']+'"' : '';
-    h+='<th data-k="'+c[0]+'" data-l="'+esc(c[1])+'" class="'+cls+'"'+st+'>'+c[1]+arr+'</th>';
+    var grip = (c[0]==='name'||c[0]==='target') ? ' <span class="grip" title="Drag to resize">⇔</span>' : '';
+    h+='<th data-k="'+c[0]+'" data-l="'+esc(c[1])+'" class="'+cls+'"'+st+'>'+c[1]+arr+grip+'</th>';
   });
   return h+(extra||'');
 }
@@ -1171,9 +1205,10 @@ function goalsCalc(sc){
     var el = Math.floor((new Date() - sd)/86400000)+1;
     out.elapsed = Math.max(0, Math.min(out.days, el));
   }
-  out.spSpace = out.spend!==null? out.spend - t.spend : null;      // = L11-L9
-  out.orSpace = out.orders!==null? out.orders - t.orders : null;   // = N11-N9
-  out.unSpace = out.units!==null? out.units - t.units : null;      // = O11-O9
+  out.spSpace = out.spend!==null? out.spend - t.spend : null;      // budget left (green when >=0)
+  // orders/units: actual - goal, so a shortfall shows as NEGATIVE and red
+  out.orSpace = out.orders!==null? t.orders - out.orders : null;
+  out.unSpace = out.units!==null? t.units - out.units : null;
   out.acSpace = (out.acos!==null && d.acos!==null)? out.acos - d.acos : null; // = Q11-Q9
   out.profit = (out.acSpace!==null)? out.acSpace * t.sales : null; // = Q12 × sales
   return out;
@@ -1199,6 +1234,15 @@ function goalsCard(sc){
   h+='<tr><td class="l">Product Goals</td>'+gcell(C.spend,fc)+gcell(C.orders,fi)+gcell(C.units,fi)+gcell(C.acos,fp)+'</tr>';
   h+='<tr><td class="l">Actual (scope)</td><td>'+fc(C.t.spend)+'</td><td>'+fi(C.t.orders)+'</td><td>'+fi(C.t.units)+'</td><td>'+fp(C.d.acos)+'</td></tr>';
   h+='<tr><td class="l">Space or over-consume</td>'+gcell(C.spSpace,fc,true)+gcell(C.orSpace,fi,true)+gcell(C.unSpace,fi,true)+gcell(C.acSpace,fp,true)+'</tr>';
+  h+='<tr><td class="l" colspan="5" style="text-align:left;color:#64748b;font-size:10.5px">Spend/ACOS: green = budget or ACOS room left · Orders/Units: red − = below goal, green + = goal exceeded</td></tr>';
+  if (C.spend){
+    var left = C.days && C.elapsed!=null ? Math.max(0, C.days - C.elapsed) : null;
+    h+='<tr><td class="l">Budget share used</td><td>'+fp(Math.min(9.99,C.t.spend/C.spend))+'</td>'+
+       '<td colspan="3" class="l" style="text-align:left;color:#64748b">of the goal budget consumed</td></tr>';
+    h+='<tr><td class="l">Consumable budget</td>'+gcell(C.spSpace,fc,true)+
+       '<td colspan="3" class="l" style="text-align:left;color:#64748b">left to spend'+
+       (left? ' · '+fc(Math.max(0,C.spSpace)/Math.max(1,left))+'/day for the '+left+' days left':'')+'</td></tr>';
+  }
   h+='<tr class="tot"><td class="l">Profit (ACOS space × Sales)</td><td colspan="3"></td>'+gcell(C.profit,fc,true)+'</tr></table></div>';
   if (C.days){
     h+='<div class="note" style="margin-top:10px">Days: <b>'+C.days+'</b>'+
@@ -1280,10 +1324,10 @@ function renderPorts(sc){
   var pr = Engine.portfolioRows(sc);
   var h = kpiRow({m:pr.total, d:pr.totalD});
   h += '<div class="grid" style="margin-bottom:14px">'+goalsCard(sc)+organicCard(sc)+'</div>';
-  h+='<div class="tblwrap glass"><table><thead><tr><th class="l fz" style="left:0;min-width:280px;max-width:360px">Portfolio</th><th class="l">Campaigns</th>';
+  h+='<div class="tblwrap glass"><table><thead><tr><th class="l fz" style="left:0">Portfolio</th><th class="l">Campaigns</th>';
   FULLH.forEach(function(x){ h+='<th>'+x+'</th>'; });
   h+='</tr></thead><tbody>';
-  h+='<tr class="tot"><td class="l fz" style="left:0;min-width:280px;max-width:360px">TOTAL — scope</td><td class="l"></td>'+
+  h+='<tr class="tot"><td class="l fz" style="left:0">TOTAL — scope</td><td class="l"></td>'+
      fullCells(null, pr.total, pr.totalD, Engine.shares(pr.total, pr.total))+'</tr>';
   pr.rows.forEach(function(p){
     var chips = Object.keys(p.srcs).map(function(f){
@@ -1292,7 +1336,7 @@ function renderPorts(sc){
     var states = Object.keys(p.states).map(function(st){
       return p.states[st]+' '+st;
     }).join(' · ');
-    h+='<tr><td class="l fz" style="left:0;min-width:280px;max-width:360px"><span class="campname" title="'+esc(p.port)+'">'+esc(p.port)+'</span>'+
+    h+='<tr><td class="l fz" style="left:0"><span class="campname" title="'+esc(p.port)+'">'+esc(p.port)+'</span>'+
        '<span class="dim">'+esc(states)+'</span></td>'+
        '<td class="l">'+chips+'</td>'+fullCells(p.n, p.m, p.d, p.sh)+'</tr>';
   });
@@ -1361,25 +1405,27 @@ function renderCamps(sc){
   var cr = Engine.campaignRows(sc);
   var rows = applyFilters(cr.rows, S.cf, S.csearch, function(r){ return r.name+' '+r.port; });
   rows = sortRows(rows, S.csort);
-  var FZ = {name:'fz', name_st:'left:62px;min-width:280px;max-width:380px'};
+  var FZ = {name:'fz namecol', name_st:'left:62px'};
   var h = fbarHTML('cfbar', CFCOLS, S.cf, S.csearch, false);
   h = h.replace('</div>', '<span class="spacer"></span>'+
     '<div class="seg" id="cviewSeg"><button data-v="port" class="'+(S.cview==='port'?'on':'')+'">By Portfolio</button>'+
     '<button data-v="flat" class="'+(S.cview==='flat'?'on':'')+'">All Campaigns</button></div>'+
     '<span class="dim">'+rows.length+' campaigns</span></div>');
-  h+='<div class="tblwrap glass"><table><thead><tr>'+
+  var THEAD='<div class="tblwrap glass"><table><thead><tr>'+
      '<th class="l fz" style="left:0;width:62px">Type</th>'+
      thRow(CCOLS,S.csort,'',FZ)+'</tr></thead><tbody>';
   function campRow(r, shOwn){
     var hh='<tr><td class="l fz" style="left:0"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
-       '<td class="l fz" style="left:62px;min-width:280px;max-width:380px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
+       '<td class="l fz namecol" style="left:62px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
        '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
     MCOLS.forEach(function(c){ hh+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
     SHCOLS.forEach(function(sx){ hh+='<td'+shBg(shOwn[sx[0]])+'>'+fp(shOwn[sx[0]])+'</td>'; });
     return hh+'</tr>';
   }
   if (S.cview === 'flat'){
+    h+=THEAD;
     rows.forEach(function(r){ h += campRow(r, r.sh); });
+    h+='</tbody></table></div>';
   } else {
     var groups = {}, order = [];
     rows.forEach(function(r){
@@ -1394,18 +1440,24 @@ function renderCamps(sc){
     });
     order.sort(function(a,b){ return gm[b].spend-gm[a].spend; });
     order.forEach(function(port){
-      var m=gm[port], d=Engine.derived(m), sh=Engine.shares(m, cr.total);
-      h+='<tr class="grp"><td class="l fz" style="left:0">'+groups[port].length+'</td>'+
-         '<td class="l fz" style="left:62px;min-width:280px;max-width:380px"><span class="campname" title="'+esc(port)+'">📁 '+esc(port)+'</span></td><td></td><td></td>'+
-         '<td>'+fi(m.impr)+'</td><td>'+fi(m.clicks)+'</td><td>'+fp(d.ctr)+'</td><td>'+fc(m.spend)+'</td><td>'+fc(m.sales)+
-         '</td><td>'+fi(m.orders)+'</td><td>'+fi(m.units)+'</td><td>'+fp(d.cvr)+'</td><td>'+fp(d.acos)+'</td><td>'+fc(d.cpc)+
-         '</td><td>'+fx(d.roas)+'</td><td>'+fc(d.aov)+'</td>';
-      ['is','cs','ss','rs','os','us'].forEach(function(k){ h+='<td'+shBg(sh[k])+'>'+fp(sh[k])+'</td>'; });
-      h+='</tr>';
+      var m=gm[port], d=Engine.derived(m);
+      h+='<div class="pcard glass"><div class="phead">'+
+         '<span class="pname" title="'+esc(port)+'">📁 '+esc(port)+'</span>'+
+         '<span class="pstat">'+groups[port].length+' campaigns</span>'+
+         '<span class="pstat">Spend <b>'+fc(m.spend)+'</b></span>'+
+         '<span class="pstat">Sales <b>'+fc(m.sales)+'</b></span>'+
+         '<span class="pstat">Orders <b>'+fi(m.orders)+'</b></span>'+
+         '<span class="pstat">Units <b>'+fi(m.units)+'</b></span>'+
+         '<span class="pstat">ACOS <b>'+fp(d.acos)+'</b></span>'+
+         '<span class="pstat">ROAS <b>'+fx(d.roas)+'</b></span>'+
+         '<span class="pstat">CPC <b>'+fc(d.cpc)+'</b></span>'+
+         '</div><div class="tblwrap"><table><thead><tr>'+
+         '<th class="l fz" style="left:0;width:62px">Type</th>'+
+         thRow(CCOLS,S.csort,'',FZ)+'</tr></thead><tbody>';
       groups[port].forEach(function(r){ h += campRow(r, Engine.shares(r.m, m)); });
+      h+='</tbody></table></div></div>';
     });
   }
-  h+='</tbody></table></div>';
   h+='<div class="note">'+(S.cview==='port'
       ? 'Campaign shares are within their portfolio (each 📁 group sums to 100%); the 📁 row’s own shares are of the whole scope.'
       : 'Campaign shares are of the whole selected scope.')+
@@ -1421,7 +1473,7 @@ function renderPlc(sc){
   if (S.ptype==='sb') rows = rows.filter(function(r){ return r.src==='SB'; });
   rows = applyFilters(rows, S.pf, S.psearch, function(r){ return r.name+' '+r.port; });
   rows = sortRows(rows, S.psort);
-  var FZ = {name:'fz', name_st:'left:88px;min-width:280px;max-width:380px'};
+  var FZ = {name:'fz namecol', name_st:'left:88px'};
   var h = fbarHTML('pfbar', CFCOLS, S.pf, S.psearch, false);
   h = h.replace('</div>', '<span class="spacer"></span>'+
     '<div class="seg" id="ptypeSeg"><button data-v="all" class="'+(S.ptype==='all'?'on':'')+'">All</button>'+
@@ -1438,7 +1490,7 @@ function renderPlc(sc){
     var open = !S.pclosed[r.key];
     h+='<tr><td class="exp fz" style="left:0" data-k="'+esc(r.key)+'">'+(open?'▾':'▸')+'</td>'+
        '<td class="l fz" style="left:26px"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
-       '<td class="l fz" style="left:88px;min-width:280px;max-width:380px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
+       '<td class="l fz namecol" style="left:88px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
        '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
     MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
     SHCOLS.forEach(function(sx){ h+='<td'+shBg(r.sh[sx[0]])+'>'+fp(r.sh[sx[0]])+'</td>'; });
@@ -1446,7 +1498,7 @@ function renderPlc(sc){
     if (open){
       r.places.forEach(function(p){
         h+='<tr class="sub"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
-           '<td class="l pl fz" style="left:88px;min-width:280px;max-width:380px">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
+           '<td class="l pl fz namecol" style="left:88px">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
         MCOLS.forEach(function(c){
           var v = (c[3]==='m')?p.m[c[0]]:p.d[c[0]];
           h+='<td>'+c[2](v)+'</td>';
@@ -1455,7 +1507,7 @@ function renderPlc(sc){
         h+='</tr>';
       });
       h+='<tr class="sub tot2"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
-         '<td class="l pl fz" style="left:88px;min-width:280px;max-width:380px">CAMPAIGN TOTAL</td><td></td><td></td>';
+         '<td class="l pl fz namecol" style="left:88px">CAMPAIGN TOTAL</td><td></td><td></td>';
       MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
       h+='<td colspan="6"></td></tr>';
     }
@@ -1481,14 +1533,14 @@ function renderTgts(sc){
     function(r){ return r.target+' '+r.camp+' '+r.match; });
   rows = sortRows(rows, S.tsort);
   var days = S.model.kw.days;
-  var FZ = {target:'fz', target_st:'left:62px;min-width:300px;max-width:420px'};
+  var FZ = {target:'fz namecol', target_st:'left:62px'};
   var h = fbarHTML('tfbar', TFCOLS, S.tf, S.tsearch, true);
-  h = h.replace('<select class="fcol">',
+  h = h.replace('<input class="txt"',
     '<div class="seg" id="tclassSeg">'+
     '<button data-v="all" class="'+(S.tclass==='all'?'on':'')+'">All</button>'+
     '<button data-v="kw" class="'+(S.tclass==='kw'?'on':'')+'">Keywords</button>'+
     '<button data-v="pt" class="'+(S.tclass==='pt'?'on':'')+'">ASIN / PT</button></div>'+
-    '<select class="fcol">');
+    '<input class="txt"');
   if (S.heat){
     var nHit = rows.filter(function(r){ return r.hm && r.hm!=='NF'; }).length;
     if (!nHit){
@@ -1512,15 +1564,16 @@ function renderTgts(sc){
      thRow(TCOLS,S.tsort,hmHead,FZ)+'</tr></thead><tbody>';
   var t=tr.total, td=tr.totalD;
   h+='<tr class="tot"><td class="l fz" style="left:0">'+rows.length+' targets</td>'+
-     '<td class="l fz" style="left:62px;min-width:300px;max-width:420px">TOTAL — scope</td><td></td><td></td>'+
+     '<td class="l fz namecol" style="left:62px">TOTAL — scope</td><td></td><td></td>'+
      '<td>'+fi(t.impr)+'</td><td>'+fi(t.clicks)+'</td><td>'+fp(td.ctr)+'</td><td>'+fc(t.spend)+'</td><td>'+fc(t.sales)+
      '</td><td>'+fi(t.orders)+'</td><td>'+fi(t.units)+'</td><td>'+fp(td.cvr)+'</td><td>'+fp(td.acos)+'</td><td>'+fc(td.cpc)+
      '</td><td>'+fx(td.roas)+'</td><td>'+fc(td.aov)+'</td><td colspan="'+(6+(S.heat?2+days.length:0))+'"></td></tr>';
   rows.forEach(function(r){
     h+='<tr><td class="l fz" style="left:0"><span class="chip '+r.src+'">'+r.src+'</span></td>'+
-       '<td class="l fz" style="left:62px;min-width:300px;max-width:420px" title="'+esc(r.stateLine)+'"><span class="campname">'+esc(r.target)+'</span>'+
-       '<span class="dim">'+esc(r.camp)+' · '+esc(r.stateLine)+'</span></td>'+
-       '<td class="l">'+esc(r.match)+'</td><td>'+fc(r.bid||null)+'</td>';
+       '<td class="l fz namecol" style="left:62px" title="'+esc(r.stateLine)+'"><span class="campname">'+esc(r.target)+'</span>'+
+       '<span class="dim campname">'+esc(r.camp)+'</span></td>'+
+       '<td class="l"><span class="mchip'+((r.match==='Exact'||r.match==='Phrase'||r.match==='Broad')?'':' pt')+'">'+esc(r.match)+'</span>'+
+       ((r.states.t||'').toLowerCase()==='enabled'?'':' '+stChip(r.states.t))+'</td><td>'+fc(r.bid||null)+'</td>';
     MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
     SHCOLS.forEach(function(sx){ h+='<td'+shBg(r.sh[sx[0]])+'>'+fp(r.sh[sx[0]])+'</td>'; });
     if (S.heat){
