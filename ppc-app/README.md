@@ -25,6 +25,10 @@ KW TRACKED**) — every analysis lives in the app:
   SKC/MKC/SAC/MAC structure, SB ad format, SD targeting, campaign states),
   every table with the full metric set (CTR, CVR, ACOS, CPC, ROAS, AOV, CPA)
   AND the IS/CS/SS/RS/OS/US share columns.
+- **Placements** — its own tab, like the original sheet: every SP and SB
+  campaign listed spend-sorted with its placements open underneath (fixed
+  order, Adj %, metrics, within-campaign shares, CAMPAIGN TOTAL row).
+  All / SP / SB filter, Expand-all / Collapse-all, header sort & filter menus.
 - **Targets** — All / Keywords / ASIN·PT quick filter, spend-sorted targets
   with match type (Exact / Phrase / Broad / ASIN / ASIN Expanded / Category /
   Auto), the
@@ -53,11 +57,28 @@ KW TRACKED**) — every analysis lives in the app:
 3. Replace the contents of the default `Code.gs` with the `Code.gs` file here.
 4. Click **＋ → HTML**, name it exactly **Index**, and replace its contents
    with `Index.html`.
+   **Important — paste the WHOLE file:** open the downloaded `Index.html` in a
+   text editor (Notepad), press **Ctrl+A** then **Ctrl+C**, and paste. The last
+   line in the Apps Script editor must be `</html>`. A partial paste is the #1
+   cause of a blank page — if that happens, the app now shows a red warning
+   telling you to re-paste instead of staying blank.
 5. **Deploy → New deployment → ⚙ Web app**:
    - *Execute as*: **Me**
    - *Who has access*: your choice (Only myself / Anyone with the link)
-   - Click **Deploy**, authorize when asked, and copy the web app URL.
+   - Click **Deploy** and authorize. If Google shows **"Google hasn't verified
+     this app"**, click *Advanced → Go to (project) (unsafe) → Allow* — it is
+     your own script, this is normal and safe.
 6. Open the URL — done.
+
+### If the page is blank or asks for access
+- Make sure the browser is signed into the **same Google account** that owns
+  the sheet — with several Google accounts signed in, the /exec link often
+  opens under the wrong one and shows a blank page or an access prompt. Try
+  an incognito window signed into just that account.
+- If you see a red **"Index.html is incomplete"** message, the paste was cut
+  off — re-paste the whole file (last line must be `</html>`).
+- When creating the HTML file, type only **Index** as the name (the editor
+  adds .html itself — naming it "Index.html" creates "Index.html.html").
 
 ## Daily use
 

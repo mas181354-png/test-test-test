@@ -7,6 +7,81 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+/* critical boot styles — full theme loads later in the file */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;color:#0f2c5f;font-size:13px;min-height:100vh;
+  background:linear-gradient(160deg,#dbeffe 0%,#e8f3ff 38%,#f4f9ff 70%,#ffffff 100%);background-attachment:fixed}
+.wrap{position:relative;z-index:1;max-width:1560px;margin:0 auto;padding:14px 18px 60px}
+.glass{background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.75);border-radius:16px;
+  box-shadow:0 8px 32px rgba(37,99,235,.13);backdrop-filter:blur(18px)}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;margin-bottom:16px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px}
+.logo .dot{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,#2563eb,#0ea5e9);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+nav{display:flex;gap:4px;background:rgba(219,234,254,.6);border-radius:12px;padding:4px}
+nav button{border:0;background:transparent;padding:7px 16px;border-radius:9px;cursor:pointer;font:600 12.5px 'Inter';color:#0f2c5f}
+nav button.on{background:#fff;color:#2563eb}
+.spacer{flex:1}
+.hbtn{border:1px solid rgba(37,99,235,.25);background:rgba(255,255,255,.72);color:#2563eb;font:600 12px 'Inter';padding:8px 14px;border-radius:10px;cursor:pointer}
+.stamp{font-size:10.5px;color:#64748b}
+.msel{position:relative}
+.msel>button{display:flex;align-items:center;gap:7px;border:1px solid rgba(37,99,235,.25);background:rgba(255,255,255,.72);padding:8px 12px;border-radius:10px;cursor:pointer;font:600 12px 'Inter';color:#0f2c5f}
+.msel>button .cnt{background:#2563eb;color:#fff;border-radius:999px;padding:1px 8px;font-size:10.5px}
+.msel .pane{display:none}
+#load{display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;height:60vh}
+.spin{width:44px;height:44px;border-radius:50%;border:4px solid #dbeafe;border-top-color:#2563eb;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.pasteerr{max-width:640px;background:#fee2e2;border:2px solid #ef4444;color:#7f1d1d;border-radius:14px;padding:18px 22px;font:600 14px 'Inter';line-height:1.5}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+<div class="wrap">
+  <header class="glass">
+    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v4</span></div>
+    <nav id="nav">
+      <button data-tab="agg" class="on">Aggregates</button>
+      <button data-tab="ports">Portfolios</button>
+      <button data-tab="camps">Campaigns</button>
+      <button data-tab="plc">Placements</button>
+      <button data-tab="tgts">Targets</button>
+      <button data-tab="spa">SP Analysis</button>
+      <button data-tab="sba">SB Analysis</button>
+      <button data-tab="sda">SD Analysis</button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="msel" id="mselPort">
+      <button><span>Portfolios</span><span class="cnt" id="portCnt">All</span> ▾</button>
+      <div class="pane glass" id="portPane"></div>
+    </div>
+    <div class="msel" id="mselCamp">
+      <button><span>Campaigns</span><span class="cnt" id="campCnt">All</span> ▾</button>
+      <div class="pane glass" id="campPane"></div>
+    </div>
+    <button class="hbtn" id="refresh">⟳ Refresh</button>
+    <span class="stamp" id="stamp"></span>
+  </header>
+  <div id="load"><div class="spin"></div><div style="font-weight:600;color:var(--blue)">Loading your PPC data…</div></div>
+  <div id="view" style="display:none"></div>
+</div>
+
+<script>
+/* boot guard: if the file below was pasted incompletely, say so instead of a blank page */
+window.__CT_BOOT = 1;
+setTimeout(function(){
+  if (!window.__CT_EOF) {
+    var l = document.getElementById('load');
+    if (l) l.innerHTML = '<div class="pasteerr">⚠ <b>Index.html is incomplete.</b><br>'+
+      'The file was not pasted fully into Apps Script, so the app cannot start.<br><br>'+
+      '1. Open the downloaded <b>Index.html</b> in a text editor (Notepad).<br>'+
+      '2. Press <b>Ctrl+A</b> (select all) then <b>Ctrl+C</b>.<br>'+
+      '3. In Apps Script open the <b>Index</b> file, press Ctrl+A, then Ctrl+V.<br>'+
+      '4. The last line must be <b>&lt;/html&gt;</b>. Save, then Deploy → Manage deployments → ✏ → New version.</div>';
+  }
+}, 2500);
+</script>
+<style>
+
 :root{
   --blue:#2563eb; --sky:#0ea5e9; --ink:#0f2c5f; --mut:#64748b;
   --glass:rgba(255,255,255,.55); --glass2:rgba(255,255,255,.72);
@@ -172,37 +247,8 @@ thead th.fz{z-index:8}
 .spin{width:44px;height:44px;border-radius:50%;border:4px solid #dbeafe;border-top-color:var(--blue);
   animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+
 </style>
-</head>
-<body>
-<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
-<div class="wrap">
-  <header class="glass">
-    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE</div>
-    <nav id="nav">
-      <button data-tab="agg" class="on">Aggregates</button>
-      <button data-tab="ports">Portfolios</button>
-      <button data-tab="camps">Campaigns</button>
-      <button data-tab="tgts">Targets</button>
-      <button data-tab="spa">SP Analysis</button>
-      <button data-tab="sba">SB Analysis</button>
-      <button data-tab="sda">SD Analysis</button>
-    </nav>
-    <div class="spacer"></div>
-    <div class="msel" id="mselPort">
-      <button><span>Portfolios</span><span class="cnt" id="portCnt">All</span> ▾</button>
-      <div class="pane glass" id="portPane"></div>
-    </div>
-    <div class="msel" id="mselCamp">
-      <button><span>Campaigns</span><span class="cnt" id="campCnt">All</span> ▾</button>
-      <div class="pane glass" id="campPane"></div>
-    </div>
-    <button class="hbtn" id="refresh">⟳ Refresh</button>
-    <span class="stamp" id="stamp"></span>
-  </header>
-  <div id="load"><div class="spin"></div><div style="font-weight:600;color:var(--blue)">Loading your PPC data…</div></div>
-  <div id="view" style="display:none"></div>
-</div>
 
 <script>
 /**
@@ -729,13 +775,14 @@ var S = {
   raw:null, model:null, tab:'agg',
   selPorts:[], selKeys:[],
   cf:[], tf:[], csearch:'', tsearch:'', cview:'port', tclass:'all', goals:null,
+  pf:[], psearch:'', psort:{k:'spend',dir:-1}, ptype:'all', pclosed:{},
   csort:{k:'spend',dir:-1}, tsort:{k:'spend',dir:-1},
-  heat:false, open:{}
+  heat:false
 };
 try{
   var saved = JSON.parse(localStorage.getItem('ppcApp')||'{}');
   ['tab','selPorts','selKeys','heat','cview','tclass'].forEach(function(k){ if(saved[k]!==undefined) S[k]=saved[k]; });
-  if(S.tab==='dash') S.tab='agg';
+  if(['agg','ports','camps','plc','tgts','spa','sba','sda'].indexOf(S.tab)<0) S.tab='agg';
 }catch(e){}
 function persist(){
   try{ localStorage.setItem('ppcApp', JSON.stringify(
@@ -768,6 +815,7 @@ function onData(json){
   S.selPorts = S.selPorts.filter(function(p){ return S.model.portfolios.indexOf(p)>=0; });
   var keys = {}; S.model.campaigns.forEach(function(c){ keys[c.key]=true; });
   S.selKeys = S.selKeys.filter(function(k){ return keys[k]; });
+  S.warnings = payload.warnings || [];
   document.getElementById('load').style.display='none';
   document.getElementById('view').style.display='';
   document.getElementById('stamp').textContent =
@@ -897,11 +945,10 @@ function openColMenu(th, key, label, ctx){
     b.onclick=function(ev){
       ev.stopPropagation();
       var a=this.getAttribute('data-a');
-      var sort = MENU.ctx==='c'?S.csort:S.tsort;
-      var filters = MENU.ctx==='c'?S.cf:S.tf;
+      var filters = MENU.ctx==='c'?S.cf:(MENU.ctx==='p'?S.pf:S.tf);
       if (a==='desc'||a==='asc'){
-        if (MENU.ctx==='c') S.csort={k:MENU.key,dir:a==='desc'?-1:1};
-        else S.tsort={k:MENU.key,dir:a==='desc'?-1:1};
+        var ns = {k:MENU.key, dir:a==='desc'?-1:1};
+        if (MENU.ctx==='c') S.csort=ns; else if (MENU.ctx==='p') S.psort=ns; else S.tsort=ns;
       } else if (a==='apply'){
         var v = parseFloat(document.getElementById('cmVal').value);
         if (isNaN(v)) return;
@@ -928,6 +975,8 @@ function valOf(row,k){
   if (row.m && k in row.m) return row.m[k];
   if (row.d && k in row.d) return row.d[k];
   if (row.sh && k in row.sh) return row.sh[k];
+  var v = row[k];
+  if (typeof v==='string' || typeof v==='number') return v;
   return null;
 }
 function applyFilters(rows, filters, search, textOf){
@@ -986,7 +1035,12 @@ function wireFbar(id, filters, cols, onChange, onSearch, onHeat){
   });
   var t=null;
   el.querySelector('.txt').oninput=function(){
-    var v=this.value; clearTimeout(t); t=setTimeout(function(){ onSearch(v); },250);
+    var v=this.value; clearTimeout(t);
+    t=setTimeout(function(){
+      onSearch(v);
+      var el2=document.querySelector('#'+id+' .txt');
+      if (el2){ el2.focus(); try{ el2.setSelectionRange(el2.value.length, el2.value.length); }catch(e){} }
+    },250);
   };
   var h=el.querySelector('.heat');
   if (h) h.onchange=function(){ onHeat(this.checked); };
@@ -1307,46 +1361,23 @@ function renderCamps(sc){
   var cr = Engine.campaignRows(sc);
   var rows = applyFilters(cr.rows, S.cf, S.csearch, function(r){ return r.name+' '+r.port; });
   rows = sortRows(rows, S.csort);
-  var FZ = {name:'fz', name_st:'left:88px;min-width:280px;max-width:360px'};
+  var FZ = {name:'fz', name_st:'left:62px;min-width:280px;max-width:380px'};
   var h = fbarHTML('cfbar', CFCOLS, S.cf, S.csearch, false);
-  // view toggle injected into the filter bar after render (see render())
   h = h.replace('</div>', '<span class="spacer"></span>'+
     '<div class="seg" id="cviewSeg"><button data-v="port" class="'+(S.cview==='port'?'on':'')+'">By Portfolio</button>'+
     '<button data-v="flat" class="'+(S.cview==='flat'?'on':'')+'">All Campaigns</button></div>'+
     '<span class="dim">'+rows.length+' campaigns</span></div>');
   h+='<div class="tblwrap glass"><table><thead><tr>'+
-     '<th class="fz" style="left:0;width:26px"></th>'+
-     '<th class="l fz" style="left:26px;width:62px">Type</th>'+
+     '<th class="l fz" style="left:0;width:62px">Type</th>'+
      thRow(CCOLS,S.csort,'',FZ)+'</tr></thead><tbody>';
-
   function campRow(r, shOwn){
-    var open = S.open[r.key];
-    var hh='<tr><td class="exp fz" style="left:0" data-k="'+esc(r.key)+'">'+(r.places.length?(open?'▾':'▸'):'')+'</td>'+
-       '<td class="l fz" style="left:26px"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
-       '<td class="l fz" style="left:88px;min-width:280px;max-width:360px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
+    var hh='<tr><td class="l fz" style="left:0"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
+       '<td class="l fz" style="left:62px;min-width:280px;max-width:380px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
        '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
     MCOLS.forEach(function(c){ hh+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
     SHCOLS.forEach(function(sx){ hh+='<td'+shBg(shOwn[sx[0]])+'>'+fp(shOwn[sx[0]])+'</td>'; });
-    hh+='</tr>';
-    if (open && r.places.length){
-      r.places.forEach(function(p){
-        hh+='<tr class="sub"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
-            '<td class="l pl fz" style="left:88px;min-width:280px;max-width:360px">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
-        MCOLS.forEach(function(c){
-          var v = (c[3]==='m')?p.m[c[0]]:p.d[c[0]];
-          hh+='<td>'+c[2](v)+'</td>';
-        });
-        SHCOLS.forEach(function(sx){ hh+='<td'+shBg(p.sh[sx[0]])+'>'+fp(p.sh[sx[0]])+'</td>'; });
-        hh+='</tr>';
-      });
-      hh+='<tr class="sub tot2"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
-          '<td class="l pl fz" style="left:88px;min-width:280px;max-width:360px">CAMPAIGN TOTAL</td><td></td><td></td>';
-      MCOLS.forEach(function(c){ hh+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
-      hh+='<td colspan="6"></td></tr>';
-    }
-    return hh;
+    return hh+'</tr>';
   }
-
   if (S.cview === 'flat'){
     rows.forEach(function(r){ h += campRow(r, r.sh); });
   } else {
@@ -1364,23 +1395,73 @@ function renderCamps(sc){
     order.sort(function(a,b){ return gm[b].spend-gm[a].spend; });
     order.forEach(function(port){
       var m=gm[port], d=Engine.derived(m), sh=Engine.shares(m, cr.total);
-      h+='<tr class="grp"><td class="fz" style="left:0"></td><td class="l fz" style="left:26px">'+groups[port].length+'</td>'+
-         '<td class="l fz" style="left:88px;min-width:280px;max-width:360px"><span class="campname" title="'+esc(port)+'">📁 '+esc(port)+'</span></td><td></td><td></td>'+
+      h+='<tr class="grp"><td class="l fz" style="left:0">'+groups[port].length+'</td>'+
+         '<td class="l fz" style="left:62px;min-width:280px;max-width:380px"><span class="campname" title="'+esc(port)+'">📁 '+esc(port)+'</span></td><td></td><td></td>'+
          '<td>'+fi(m.impr)+'</td><td>'+fi(m.clicks)+'</td><td>'+fp(d.ctr)+'</td><td>'+fc(m.spend)+'</td><td>'+fc(m.sales)+
          '</td><td>'+fi(m.orders)+'</td><td>'+fi(m.units)+'</td><td>'+fp(d.cvr)+'</td><td>'+fp(d.acos)+'</td><td>'+fc(d.cpc)+
          '</td><td>'+fx(d.roas)+'</td><td>'+fc(d.aov)+'</td>';
       ['is','cs','ss','rs','os','us'].forEach(function(k){ h+='<td'+shBg(sh[k])+'>'+fp(sh[k])+'</td>'; });
       h+='</tr>';
-      groups[port].forEach(function(r){
-        h += campRow(r, Engine.shares(r.m, m));   // shares WITHIN the portfolio
-      });
+      groups[port].forEach(function(r){ h += campRow(r, Engine.shares(r.m, m)); });
     });
   }
   h+='</tbody></table></div>';
   h+='<div class="note">'+(S.cview==='port'
       ? 'Campaign shares are within their portfolio (each 📁 group sums to 100%); the 📁 row’s own shares are of the whole scope.'
       : 'Campaign shares are of the whole selected scope.')+
-     ' Placement shares are within their campaign. Click any column header to sort or filter it. Amazon Business is a B2B subset of the other three SP placements.</div>';
+     ' Per-campaign placements live on the Placements tab. Click any column header to sort or filter.</div>';
+  return h;
+}
+
+/* ================= PLACEMENTS ================= */
+function renderPlc(sc){
+  var cr = Engine.campaignRows(sc);
+  var rows = cr.rows.filter(function(r){ return r.places.length; });
+  if (S.ptype==='sp') rows = rows.filter(function(r){ return r.src==='SP'; });
+  if (S.ptype==='sb') rows = rows.filter(function(r){ return r.src==='SB'; });
+  rows = applyFilters(rows, S.pf, S.psearch, function(r){ return r.name+' '+r.port; });
+  rows = sortRows(rows, S.psort);
+  var FZ = {name:'fz', name_st:'left:88px;min-width:280px;max-width:380px'};
+  var h = fbarHTML('pfbar', CFCOLS, S.pf, S.psearch, false);
+  h = h.replace('</div>', '<span class="spacer"></span>'+
+    '<div class="seg" id="ptypeSeg"><button data-v="all" class="'+(S.ptype==='all'?'on':'')+'">All</button>'+
+    '<button data-v="sp" class="'+(S.ptype==='sp'?'on':'')+'">SP</button>'+
+    '<button data-v="sb" class="'+(S.ptype==='sb'?'on':'')+'">SB</button></div>'+
+    '<button class="hbtn" id="plcExpand">⊞ Expand all</button>'+
+    '<button class="hbtn" id="plcCollapse">⊟ Collapse all</button>'+
+    '<span class="dim">'+rows.length+' campaigns</span></div>');
+  h+='<div class="tblwrap glass"><table><thead><tr>'+
+     '<th class="fz" style="left:0;width:26px"></th>'+
+     '<th class="l fz" style="left:26px;width:62px">Type</th>'+
+     thRow(CCOLS,S.psort,'',FZ)+'</tr></thead><tbody>';
+  rows.forEach(function(r){
+    var open = !S.pclosed[r.key];
+    h+='<tr><td class="exp fz" style="left:0" data-k="'+esc(r.key)+'">'+(open?'▾':'▸')+'</td>'+
+       '<td class="l fz" style="left:26px"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
+       '<td class="l fz" style="left:88px;min-width:280px;max-width:380px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
+       '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
+    MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
+    SHCOLS.forEach(function(sx){ h+='<td'+shBg(r.sh[sx[0]])+'>'+fp(r.sh[sx[0]])+'</td>'; });
+    h+='</tr>';
+    if (open){
+      r.places.forEach(function(p){
+        h+='<tr class="sub"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
+           '<td class="l pl fz" style="left:88px;min-width:280px;max-width:380px">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
+        MCOLS.forEach(function(c){
+          var v = (c[3]==='m')?p.m[c[0]]:p.d[c[0]];
+          h+='<td>'+c[2](v)+'</td>';
+        });
+        SHCOLS.forEach(function(sx){ h+='<td'+shBg(p.sh[sx[0]])+'>'+fp(p.sh[sx[0]])+'</td>'; });
+        h+='</tr>';
+      });
+      h+='<tr class="sub tot2"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
+         '<td class="l pl fz" style="left:88px;min-width:280px;max-width:380px">CAMPAIGN TOTAL</td><td></td><td></td>';
+      MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
+      h+='<td colspan="6"></td></tr>';
+    }
+  });
+  h+='</tbody></table></div>';
+  h+='<div class="note">Fixed placement order — SP: Top of Search / Rest of Search / Product Pages / Amazon Business (a B2B subset already inside the other three) · SB: Top of Search / Detail Page / Home / Other. Placement shares are within their campaign; campaign shares are of the scope. SD campaigns have no placement rows in the bulk file.</div>';
   return h;
 }
 
@@ -1421,7 +1502,8 @@ function renderTgts(sc){
   var hmHead='';
   if (S.heat){
     hmHead='<th>SV</th><th>KW Sale</th>'+days.map(function(d){
-      var dt=new Date(d.date);
+      var m=String(d.date).match(/^(\d{4})-(\d{2})-(\d{2})/);
+      var dt=m? new Date(+m[1], +m[2]-1, +m[3]) : new Date(d.date);
       var lab=isNaN(dt)?esc(String(d.date).slice(0,6)):(dt.getDate()+' '+dt.toLocaleString('en',{month:'short'}));
       return '<th class="hmh">'+lab+'</th>';
     }).join('');
@@ -1461,22 +1543,22 @@ function renderTgts(sc){
 
 /* ---------------- render ---------------- */
 function render(){
+  if (!S.model) return;
   var sc = curScope();
   var v = document.getElementById('view');
-  if (S.tab==='agg') v.innerHTML = renderAgg(sc);
-  else if (S.tab==='ports') v.innerHTML = renderPorts(sc);
-  else if (S.tab==='spa') v.innerHTML = renderSPA(sc);
-  else if (S.tab==='sba') v.innerHTML = renderSBA(sc);
-  else if (S.tab==='sda') v.innerHTML = renderSDA(sc);
-  else if (S.tab==='camps') v.innerHTML = renderCamps(sc);
-  else v.innerHTML = renderTgts(sc);
+  var warn = (S.warnings && S.warnings.length)
+    ? '<div class="banner">⚠ '+S.warnings.map(esc).join('<br>⚠ ')+'</div>' : '';
+  if (S.tab==='agg') v.innerHTML = warn + renderAgg(sc);
+  else if (S.tab==='ports') v.innerHTML = warn + renderPorts(sc);
+  else if (S.tab==='spa') v.innerHTML = warn + renderSPA(sc);
+  else if (S.tab==='sba') v.innerHTML = warn + renderSBA(sc);
+  else if (S.tab==='sda') v.innerHTML = warn + renderSDA(sc);
+  else if (S.tab==='plc') v.innerHTML = warn + renderPlc(sc);
+  else if (S.tab==='camps') v.innerHTML = warn + renderCamps(sc);
+  else v.innerHTML = warn + renderTgts(sc);
 
   if (S.tab==='camps'){
     wireFbar('cfbar', S.cf, CFCOLS, render, function(q){S.csearch=q;render();}, null);
-    v.querySelectorAll('.exp').forEach(function(td){
-      td.onclick=function(){ var k=this.getAttribute('data-k');
-        S.open[k]=!S.open[k]; render(); };
-    });
     v.querySelectorAll('th[data-k]').forEach(function(th){
       th.onclick=function(e){ e.stopPropagation();
         openColMenu(this, this.getAttribute('data-k'), this.getAttribute('data-l')||this.textContent, 'c'); };
@@ -1485,6 +1567,23 @@ function render(){
     if (seg) seg.querySelectorAll('button').forEach(function(b){
       b.onclick=function(){ S.cview=this.getAttribute('data-v'); persist(); render(); };
     });
+  } else if (S.tab==='plc'){
+    wireFbar('pfbar', S.pf, CFCOLS, render, function(q){S.psearch=q;render();}, null);
+    v.querySelectorAll('.exp').forEach(function(td){
+      td.onclick=function(){ var k=this.getAttribute('data-k');
+        S.pclosed[k]=!S.pclosed[k]; render(); };
+    });
+    v.querySelectorAll('th[data-k]').forEach(function(th){
+      th.onclick=function(e){ e.stopPropagation();
+        openColMenu(this, this.getAttribute('data-k'), this.getAttribute('data-l')||this.textContent, 'p'); };
+    });
+    var segp = document.getElementById('ptypeSeg');
+    if (segp) segp.querySelectorAll('button').forEach(function(b){
+      b.onclick=function(){ S.ptype=this.getAttribute('data-v'); render(); };
+    });
+    var be=document.getElementById('plcExpand'), bc=document.getElementById('plcCollapse');
+    if (be) be.onclick=function(){ S.pclosed={}; render(); };
+    if (bc) bc.onclick=function(){ S.model.campaigns.forEach(function(c){ S.pclosed[c.key]=true; }); render(); };
   } else if (S.tab==='tgts'){
     wireFbar('tfbar', S.tf, TFCOLS, render, function(q){S.tsearch=q;render();},
       function(on){ S.heat=on; persist(); render(); });
@@ -1503,5 +1602,6 @@ function render(){
 load();
 })();
 </script>
+<script>window.__CT_EOF = true;</script>
 </body>
 </html>

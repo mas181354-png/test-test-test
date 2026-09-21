@@ -62,27 +62,42 @@ function doGet() {
  *  row 2 is the header row (shipped so the client resolves columns by name). */
 function getData() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var out = { generatedAt: new Date().toISOString(), sheets: {} };
+  var out = { generatedAt: new Date().toISOString(), sheets: {}, warnings: [] };
 
   [SHEETS.sp, SHEETS.sb, SHEETS.sd].forEach(function (name) {
     var sh = ss.getSheetByName(name);
     if (!sh) { out.sheets[name] = []; return; }
     var values = sh.getDataRange().getValues();
     if (values.length < 2) { out.sheets[name] = []; return; }
-    var hdr = values[1].map(function (h) { return String(h || '').trim(); });
-    var keepC = [];
+    // find the header row: the first of rows 1-3 containing 'Entity'
+    var norm = function (h) {
+      return String(h || '').trim().toLowerCase().replace(/\s+/g, ' ')
+        .replace('optimization', 'optimisation');
+    };
+    var hi = -1;
+    for (var hr = 0; hr < Math.min(3, values.length); hr++) {
+      if (values[hr].some(function (x) { return norm(x) === 'entity'; })) { hi = hr; break; }
+    }
+    if (hi < 0) {
+      out.sheets[name] = [];
+      out.warnings.push(name + ': no header row with an "Entity" column was found in ' +
+        'rows 1-3 — paste the bulk report so its header row sits in row 2.');
+      return;
+    }
+    var hdr = values[hi].map(norm);
+    var keepC = [], canon = [];
     KEEP_COLUMNS[name].forEach(function (want) {
-      var i = hdr.indexOf(want);
-      if (i >= 0) keepC.push(i);
+      var i = hdr.indexOf(norm(want));
+      if (i >= 0) { keepC.push(i); canon.push(want); }
     });
-    var entC = hdr.indexOf('Entity');
+    var entC = hdr.indexOf('entity');
     var keepE = {};
     KEEP_ENTITIES[name].forEach(function (e) { keepE[e] = true; });
 
     var rows = [];
-    // header row (r=2) first, with only the kept columns re-labelled in place
-    rows.push({ r: 2, v: project(values[1], keepC) });
-    for (var i = 2; i < values.length; i++) {
+    // ship the header under CANONICAL names so the client always resolves them
+    rows.push({ r: 2, v: canon.slice() });
+    for (var i = hi + 1; i < values.length; i++) {
       var ent = entC >= 0 ? String(values[i][entC] || '').trim() : '';
       if (!ent || !keepE[ent]) continue;
       rows.push({ r: i + 1, v: project(values[i], keepC) });
@@ -94,12 +109,14 @@ function getData() {
   var kw = ss.getSheetByName(SHEETS.kw);
   var kwRows = [];
   if (kw) {
+    var tz = ss.getSpreadsheetTimeZone();
     var kv = kw.getDataRange().getValues();
     for (var r = 0; r < kv.length; r++) {
       var row = kv[r].slice(0, 37);
       var any = false;
       for (var c = 0; c < row.length; c++) {
-        if (row[c] instanceof Date) row[c] = row[c].toISOString();
+        // calendar string in the sheet's timezone -> no day shift for viewers
+        if (row[c] instanceof Date) row[c] = Utilities.formatDate(row[c], tz, 'yyyy-MM-dd');
         if (row[c] !== '' && row[c] !== null && String(row[c]).trim() !== '') any = true;
       }
       if (r + 1 <= 4 || any) kwRows.push({ r: r + 1, v: row });
@@ -119,11 +136,13 @@ var GOAL_KEYS = [['start', 'Start Date'], ['end', 'End Date'],
 function readGoals_(ss) {
   var sh = ss.getSheetByName(GOALS_SHEET);
   if (!sh) return null;
+  var tz = ss.getSpreadsheetTimeZone();
   var v = sh.getRange(2, 1, GOAL_KEYS.length, 2).getValues();
   var out = {};
   GOAL_KEYS.forEach(function (k, i) {
     var x = v[i] ? v[i][1] : '';
-    if (x instanceof Date) x = x.toISOString().slice(0, 10);
+    // format in the SPREADSHEET timezone so save -> load never shifts a day
+    if (x instanceof Date) x = Utilities.formatDate(x, tz, 'yyyy-MM-dd');
     out[k[0]] = (x === '' ? null : x);
   });
   return out;
@@ -132,6 +151,8 @@ function readGoals_(ss) {
 /** Called by the app's Save button — stores the goal inputs in a GOALS tab
  *  (created automatically the first time). */
 function saveGoals(obj) {
+  var lock = LockService.getDocumentLock();
+  lock.tryLock(5000);
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName(GOALS_SHEET) || ss.insertSheet(GOALS_SHEET);
   sh.getRange(1, 1, 1, 2).setValues([['Setting', 'Value']]);
@@ -140,6 +161,7 @@ function saveGoals(obj) {
     return [k[1], v];
   });
   sh.getRange(2, 1, rows.length, 2).setValues(rows);
+  lock.releaseLock();
   return 'ok';
 }
 
