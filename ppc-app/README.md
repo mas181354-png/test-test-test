@@ -4,13 +4,19 @@ A light-blue / white glassmorphism web app that runs on top of your Google
 Sheet. The sheet holds only raw data (**Upload SP, Upload SB, Upload SD,
 KW TRACKED**) — every analysis lives in the app:
 
-- **Dashboard** — totals across all ad types, spend donut, campaign states,
-  per-portfolio totals, SP placements / match types / bidding strategies /
-  Auto-vs-Manual / SKC-MKC-SAC-MAC structure, SB ad format + placements,
-  SD sections.
-- **Campaigns** — spend-sorted table with metrics, ratios and IS/CS/SS/RS/OS/US
-  shares; click ▸ on a campaign to expand its **placements** (fixed order,
-  Adj %, per-placement metrics + within-campaign shares, CAMPAIGN TOTAL row).
+- **Aggregates** — totals across all ad types, spend donut, campaign states,
+  portfolios in scope, match/target-type mix.
+- **Portfolios** — one row per portfolio with campaign counts by ad type,
+  every metric and its share of the scope.
+- **Campaigns** — grouped by portfolio (📁 rows are portfolio subtotals),
+  spend-sorted, with metrics, ratios and IS/CS/SS/RS/OS/US shares; click ▸ on
+  a campaign to expand its **placements** (fixed order, Adj %, per-placement
+  metrics + within-campaign shares, CAMPAIGN TOTAL row).
+- **SP Analysis / SB Analysis / SD Analysis** — the original sheet's analysis
+  blocks (placements, match/target types, bidding strategies, Auto-vs-Manual,
+  SKC/MKC/SAC/MAC structure, SB ad format, SD targeting, campaign states),
+  every table with the full metric set (CTR, CVR, ACOS, CPC, ROAS, AOV, CPA)
+  AND the IS/CS/SS/RS/OS/US share columns.
 - **Targets** — spend-sorted targets with match type (Exact / Phrase / Broad /
   ASIN / ASIN Expanded / Category / Auto), the
   `Campaign | Ad group | Target` state line, shares, and the **keyword rank

@@ -93,6 +93,8 @@ tbody tr:hover td{background:rgba(219,234,254,.35)}
 tr.tot td{background:rgba(219,234,254,.6);font-weight:700;border-top:2px solid rgba(37,99,235,.35)}
 tr.sub td{background:rgba(240,249,255,.72);color:#1e3a5f;font-size:11.5px}
 tr.sub.tot2 td{background:rgba(219,234,254,.85);font-weight:700}
+tr.grp td{background:linear-gradient(90deg,rgba(37,99,235,.16),rgba(14,165,233,.10));
+  font-weight:800;color:#1e3a8a;border-top:2px solid rgba(37,99,235,.30);font-size:12px}
 .exp{cursor:pointer;color:var(--blue);font-weight:800;width:26px;text-align:center;user-select:none}
 .chip{display:inline-block;padding:2px 8px;border-radius:999px;font:700 10px 'Inter';color:#fff}
 .chip.SP{background:#2563eb}.chip.SB{background:#7c3aed}.chip.SBV{background:#db2777}.chip.SD{background:#0d9488}
@@ -146,9 +148,13 @@ th.hmh{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;padding
   <header class="glass">
     <div class="logo"><div class="dot">◈</div>PPC Command Center</div>
     <nav id="nav">
-      <button data-tab="dash" class="on">Dashboard</button>
+      <button data-tab="agg" class="on">Aggregates</button>
+      <button data-tab="ports">Portfolios</button>
       <button data-tab="camps">Campaigns</button>
       <button data-tab="tgts">Targets</button>
+      <button data-tab="spa">SP Analysis</button>
+      <button data-tab="sba">SB Analysis</button>
+      <button data-tab="sda">SD Analysis</button>
     </nav>
     <div class="spacer"></div>
     <div class="msel" id="mselPort">
@@ -509,6 +515,27 @@ var Engine = (function () {
     return { rows: rows, total: tot, totalD: derived(tot) };
   }
 
+  // Portfolios table rows — one row per portfolio in scope, full metrics +
+  // shares vs the scope total, spend-desc
+  function portfolioRows(sc) {
+    var tot = totalM(sc.campaigns);
+    var by = {};
+    sc.campaigns.forEach(function (c) {
+      if (!by[c.port]) by[c.port] = { port: c.port, n: 0, m: zeroM(),
+                                      srcs: {}, states: {} };
+      var p = by[c.port];
+      p.n++; addM(p.m, c.m);
+      p.srcs[c.fmt] = (p.srcs[c.fmt] || 0) + 1;
+      p.states[c.state] = (p.states[c.state] || 0) + 1;
+    });
+    var rows = Object.keys(by).map(function (k) {
+      var p = by[k];
+      p.d = derived(p.m); p.sh = shares(p.m, tot);
+      return p;
+    }).sort(function (a, b) { return b.m.spend - a.m.spend; });
+    return { rows: rows, total: tot, totalD: derived(tot) };
+  }
+
   // Targets table rows (spend-desc, stable by source order like the sheet)
   function targetRows(sc, kwModel) {
     var tot = totalM(sc.targets);
@@ -631,10 +658,18 @@ var Engine = (function () {
       ['Video', seg(camps, function (c) { return c.fmt === 'SBV'; })]
     ];
 
-    // SD targeting (target-level)
+    // SB target match types (target-level)
+    var sbT = tgts.filter(function (t) { return t.src === 'SB'; });
+    out.sbMatchTypes = MT.map(function (mt) {
+      return [mt, seg(sbT, function (t) { return t.match === mt; })];
+    }).filter(function (x) { return x[1].n > 0; });
+
+    // SD targeting (target-level) — every label present in the data
     var sdT = tgts.filter(function (t) { return t.src === 'SD'; });
-    out.sdTargeting = ['Contextual', 'Audience'].map(function (lab) {
-      return [lab, seg(sdT, function (t) { return t.match === lab; })];
+    var sdLabs = {};
+    sdT.forEach(function (t) { sdLabs[t.match || 'Other'] = true; });
+    out.sdTargeting = Object.keys(sdLabs).sort().map(function (lab) {
+      return [lab, seg(sdT, function (t) { return (t.match || 'Other') === lab; })];
     });
 
     // Targets match-type mix across all ad types (bonus card)
@@ -647,7 +682,7 @@ var Engine = (function () {
 
   return {
     num: num, parse: parse, scope: scope,
-    campaignRows: campaignRows, targetRows: targetRows,
+    campaignRows: campaignRows, targetRows: targetRows, portfolioRows: portfolioRows,
     aggregates: aggregates, heatBucket: heatBucket,
     derived: derived, shares: shares, totalM: totalM, M6: M6
   };
@@ -659,7 +694,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
 (function(){
 'use strict';
 var S = {
-  raw:null, model:null, tab:'dash',
+  raw:null, model:null, tab:'agg',
   selPorts:[], selKeys:[],
   cf:[], tf:[], csearch:'', tsearch:'',
   csort:{k:'spend',dir:-1}, tsort:{k:'spend',dir:-1},
@@ -668,6 +703,7 @@ var S = {
 try{
   var saved = JSON.parse(localStorage.getItem('ppcApp')||'{}');
   ['tab','selPorts','selKeys','heat'].forEach(function(k){ if(saved[k]!==undefined) S[k]=saved[k]; });
+  if(S.tab==='dash') S.tab='agg';
 }catch(e){}
 function persist(){
   try{ localStorage.setItem('ppcApp', JSON.stringify(
@@ -870,22 +906,42 @@ function thRow(cols, sort, extra){
   return h+(extra||'');
 }
 
-/* ================= DASHBOARD ================= */
-function miniTable(rows, totalRow){
-  var h='<table class="mini"><tr><th class="l" style="text-align:left">Segment</th><th>#</th><th>Impr</th><th>Clicks</th><th>Spend</th><th>Sales</th><th>Orders</th><th>Units</th><th>ACOS</th><th>ROAS</th></tr>';
-  rows.forEach(function(r){
-    var s=r[1];
-    h+='<tr><td class="l">'+esc(r[0])+'</td><td>'+fi(s.n)+'</td><td>'+fi(s.m.impr)+'</td><td>'+fi(s.m.clicks)+
-       '</td><td>'+fc(s.m.spend)+'</td><td>'+fc(s.m.sales)+'</td><td>'+fi(s.m.orders)+'</td><td>'+fi(s.m.units)+
-       '</td><td>'+fp(s.d.acos)+'</td><td>'+fx(s.d.roas)+'</td></tr>';
+/* ============ full analysis table (all metrics + shares) ============ */
+var FULLH = ['#','Impr','Clicks','CTR','Spend','Sales','Orders','Units','CVR',
+             'ACOS','CPC','ROAS','AOV','CPA','IS','CS','SS','RS','OS','US'];
+function fullCells(n, m, d, sh){
+  var h = '<td>'+(n===null?'':fi(n))+'</td><td>'+fi(m.impr)+'</td><td>'+fi(m.clicks)+'</td><td>'+fp(d.ctr)+
+    '</td><td>'+fc(m.spend)+'</td><td>'+fc(m.sales)+'</td><td>'+fi(m.orders)+'</td><td>'+fi(m.units)+
+    '</td><td>'+fp(d.cvr)+'</td><td>'+fp(d.acos)+'</td><td>'+fc(d.cpc)+'</td><td>'+fx(d.roas)+
+    '</td><td>'+fc(d.aov)+'</td><td>'+fc(d.cpa)+'</td>';
+  ['is','cs','ss','rs','os','us'].forEach(function(k){
+    h += '<td>'+(sh?fp(sh[k]):'')+'</td>';
   });
-  if (totalRow){
-    var t=totalRow;
-    h+='<tr class="tot"><td class="l">TOTAL</td><td>'+fi(t.n)+'</td><td>'+fi(t.m.impr)+'</td><td>'+fi(t.m.clicks)+
-       '</td><td>'+fc(t.m.spend)+'</td><td>'+fc(t.m.sales)+'</td><td>'+fi(t.m.orders)+'</td><td>'+fi(t.m.units)+
-       '</td><td>'+fp(t.d.acos)+'</td><td>'+fx(t.d.roas)+'</td></tr>';
+  return h;
+}
+/* rows: [[label, seg]] ; opts: {excl:[labels not in TOTAL], totalSeg: override} */
+function fullTable(rows, opts){
+  opts = opts||{};
+  var tot;
+  if (opts.totalSeg){ tot = opts.totalSeg; }
+  else {
+    var m = {impr:0,clicks:0,spend:0,sales:0,orders:0,units:0}, n = 0;
+    rows.forEach(function(r){
+      if (opts.excl && opts.excl.indexOf(r[0])>=0) return;
+      n += r[1].n;
+      Engine.M6.forEach(function(k){ m[k]+=r[1].m[k]; });
+    });
+    tot = {n:n, m:m, d:Engine.derived(m)};
   }
-  return h+'</table>';
+  var h='<div class="tblwrap"><table class="mini"><tr><th class="l" style="text-align:left">Segment</th>';
+  FULLH.forEach(function(x){ h+='<th>'+x+'</th>'; });
+  h+='</tr>';
+  rows.forEach(function(r){
+    var sh = Engine.shares(r[1].m, tot.m);
+    h+='<tr><td class="l">'+esc(r[0])+'</td>'+fullCells(r[1].n, r[1].m, r[1].d, sh)+'</tr>';
+  });
+  h+='<tr class="tot"><td class="l">TOTAL</td>'+fullCells(tot.n, tot.m, tot.d, Engine.shares(tot.m, tot.m))+'</tr>';
+  return h+'</table></div>';
 }
 var DONUT_COLORS={'SP':'#2563eb','SB':'#7c3aed','SBV':'#db2777','SD':'#0d9488'};
 function donut(segs){
@@ -918,38 +974,109 @@ function bars(rows){
   });
   return h;
 }
-function renderDash(sc){
-  var ag = Engine.aggregates(sc);
-  var t = ag.total, d = t.d;
+function kpiRow(t){
+  var d=t.d;
   var kpis=[['Spend',fc(t.m.spend)],['Sales',fc(t.m.sales)],['ACOS',fp(d.acos)],['ROAS',fx(d.roas)],
     ['Orders',fi(t.m.orders)],['Units',fi(t.m.units)],['Impressions',fi(t.m.impr)],['Clicks',fi(t.m.clicks)],
     ['CTR',fp(d.ctr)],['CVR',fp(d.cvr)],['CPC',fc(d.cpc)],['AOV',fc(d.aov)],['CPA',fc(d.cpa)]];
-  var h='<div class="kpis">'+kpis.map(function(k){
+  return '<div class="kpis">'+kpis.map(function(k){
     return '<div class="kpi glass"><div class="l">'+k[0]+'</div><div class="v">'+(k[1]||'—')+'</div></div>';
   }).join('')+'</div>';
+}
+
+/* ================= AGGREGATES ================= */
+function renderAgg(sc){
+  var ag = Engine.aggregates(sc);
+  var h = kpiRow(ag.total);
   h+='<div class="grid">';
-  h+='<div class="c8 card glass"><h3>Total — all ad types</h3>'+miniTable(ag.adTypes, t)+'</div>';
+  h+='<div class="c8 card glass"><h3>Total — all ad types</h3>'+
+     fullTable(ag.adTypes,{totalSeg:ag.total})+'</div>';
   h+='<div class="c4 card glass"><h3>Spend by ad type</h3>'+donut(ag.adTypes.map(function(a){
       var code=a[0].match(/\((\w+)\)/); code=code?code[1]:'SP';
       return {l:a[0].replace(/ \(.*/,''), v:a[1].m.spend, c:DONUT_COLORS[code]||'#94a3b8'};
     }))+'</div>';
-  h+='<div class="c6 card glass"><h3>Campaign state — all ad types</h3>'+miniTable(ag.stateAll,t)+'</div>';
-  h+='<div class="c6 card glass"><h3>Portfolios in scope</h3>'+miniTable(ag.portfolios)+'</div>';
-  h+='<div class="c12 card glass"><h3>SP — placements</h3>'+bars(ag.spPlacements)+miniTable(ag.spPlacements)+
-     '<div class="note">Amazon Business is a B2B subset already counted inside the other three placements.</div></div>';
-  h+='<div class="c6 card glass"><h3>SP — match / target types (target level)</h3>'+
-     miniTable(ag.spMatchTypes.filter(function(x){return x[1].n>0;}))+'</div>';
-  h+='<div class="c6 card glass"><h3>SP — bidding strategies</h3>'+miniTable(ag.spBidding)+
-     '<h3 style="margin-top:14px">SP — targeting type</h3>'+miniTable(ag.spTargeting)+'</div>';
-  h+='<div class="c6 card glass"><h3>SP — campaign structure</h3>'+
-     miniTable(ag.spStructure)+'<div class="note">SKC/MKC = single/multi keyword · SAC/MAC = single/multi ASIN.</div></div>';
-  h+='<div class="c6 card glass"><h3>SP — campaign state</h3>'+miniTable(ag.stateSP)+'</div>';
-  h+='<div class="c6 card glass"><h3>SB — ad format</h3>'+miniTable(ag.sbFormats)+
-     '<h3 style="margin-top:14px">SB — campaign state</h3>'+miniTable(ag.stateSB)+'</div>';
-  h+='<div class="c6 card glass"><h3>SB — placements (as reported by the bulk file)</h3>'+miniTable(ag.sbPlacements)+
-     '<div class="note">Amazon attributes SB campaign totals to the placement rows of the bulk file.</div></div>';
-  h+='<div class="c6 card glass"><h3>SD — campaign state</h3>'+miniTable(ag.stateSD)+'</div>';
-  h+='<div class="c6 card glass"><h3>SD — targeting</h3>'+miniTable(ag.sdTargeting)+'</div>';
+  h+='<div class="c12 card glass"><h3>Campaign state — all ad types</h3>'+
+     fullTable(ag.stateAll,{totalSeg:ag.total})+'</div>';
+  h+='<div class="c12 card glass"><h3>Portfolios in scope</h3>'+fullTable(ag.portfolios)+'</div>';
+  h+='<div class="c12 card glass"><h3>Match / target types — all ad types (target level)</h3>'+
+     fullTable(ag.targetMatchAll)+'</div>';
+  h+='</div>';
+  h+='<div class="note" style="margin-top:10px">Per-ad-type detail lives on the SP / SB / SD Analysis tabs; per-portfolio campaigns on the Campaigns tab.</div>';
+  return h;
+}
+
+/* ================= PORTFOLIOS ================= */
+function renderPorts(sc){
+  var pr = Engine.portfolioRows(sc);
+  var h = kpiRow({m:pr.total, d:pr.totalD});
+  h+='<div class="tblwrap glass"><table><thead><tr><th class="l">Portfolio</th><th class="l">Campaigns</th>';
+  FULLH.forEach(function(x){ h+='<th>'+x+'</th>'; });
+  h+='</tr></thead><tbody>';
+  h+='<tr class="tot"><td class="l">TOTAL — scope</td><td class="l"></td>'+
+     fullCells(null, pr.total, pr.totalD, Engine.shares(pr.total, pr.total))+'</tr>';
+  pr.rows.forEach(function(p){
+    var chips = Object.keys(p.srcs).map(function(f){
+      return '<span class="chip '+f+'">'+p.srcs[f]+' '+f+'</span>';
+    }).join(' ');
+    var states = Object.keys(p.states).map(function(st){
+      return p.states[st]+' '+st;
+    }).join(' · ');
+    h+='<tr><td class="l"><span class="campname" title="'+esc(p.port)+'">'+esc(p.port)+'</span>'+
+       '<span class="dim">'+esc(states)+'</span></td>'+
+       '<td class="l">'+chips+'</td>'+fullCells(p.n, p.m, p.d, p.sh)+'</tr>';
+  });
+  h+='</tbody></table></div>';
+  h+='<div class="note">Shares are each portfolio’s share of the selected scope. Open the Campaigns tab to see each portfolio’s campaigns and placements.</div>';
+  return h;
+}
+
+/* ================= SP / SB / SD ANALYSIS ================= */
+function renderSPA(sc){
+  var ag = Engine.aggregates(sc);
+  var spSeg = ag.adTypes[0][1];
+  var h = kpiRow(spSeg);
+  h+='<div class="grid">';
+  h+='<div class="c12 card glass"><h3>SP — placements</h3>'+bars(ag.spPlacements)+
+     fullTable(ag.spPlacements,{excl:['Amazon Business']})+
+     '<div class="note">Amazon Business is a B2B subset already counted inside the other three placements, so it is not added into TOTAL.</div></div>';
+  h+='<div class="c12 card glass"><h3>SP — match / target types (target-level attribution)</h3>'+
+     fullTable(ag.spMatchTypes.filter(function(x){return x[1].n>0;}))+'</div>';
+  h+='<div class="c12 card glass"><h3>SP — bidding strategies (campaign level)</h3>'+
+     fullTable(ag.spBidding)+'</div>';
+  h+='<div class="c12 card glass"><h3>SP — targeting type (Auto vs Manual campaigns)</h3>'+
+     fullTable(ag.spTargeting)+'</div>';
+  h+='<div class="c12 card glass"><h3>SP — campaign structure</h3>'+
+     fullTable(ag.spStructure)+
+     '<div class="note">SKC/MKC = single/multi keyword · SAC/MAC = single/multi ASIN.</div></div>';
+  h+='<div class="c12 card glass"><h3>SP — campaign state</h3>'+fullTable(ag.stateSP)+'</div>';
+  h+='</div>';
+  return h;
+}
+function renderSBA(sc){
+  var ag = Engine.aggregates(sc);
+  var m = {impr:0,clicks:0,spend:0,sales:0,orders:0,units:0}, n=0;
+  ag.sbFormats.forEach(function(x){ n+=x[1].n; Engine.M6.forEach(function(k){m[k]+=x[1].m[k];}); });
+  var h = kpiRow({n:n,m:m,d:Engine.derived(m)});
+  h+='<div class="grid">';
+  h+='<div class="c12 card glass"><h3>SB — ad format (Video vs Collection)</h3>'+
+     fullTable(ag.sbFormats)+'</div>';
+  h+='<div class="c12 card glass"><h3>SB — placements (as reported by the SB bulk file)</h3>'+
+     bars(ag.sbPlacements)+fullTable(ag.sbPlacements)+
+     '<div class="note">Amazon attributes each SB campaign’s totals to the placement rows of the bulk file.</div></div>';
+  h+='<div class="c12 card glass"><h3>SB — target match types (target level)</h3>'+
+     fullTable(ag.sbMatchTypes)+'</div>';
+  h+='<div class="c12 card glass"><h3>SB — campaign state</h3>'+fullTable(ag.stateSB)+'</div>';
+  h+='</div>';
+  return h;
+}
+function renderSDA(sc){
+  var ag = Engine.aggregates(sc);
+  var sdSeg = ag.adTypes[3][1];
+  var h = kpiRow(sdSeg);
+  h+='<div class="grid">';
+  h+='<div class="c12 card glass"><h3>SD — targeting (target level)</h3>'+
+     fullTable(ag.sdTargeting)+'</div>';
+  h+='<div class="c12 card glass"><h3>SD — campaign state</h3>'+fullTable(ag.stateSD)+'</div>';
   h+='</div>';
   return h;
 }
@@ -963,6 +1090,19 @@ function renderCamps(sc){
   var cr = Engine.campaignRows(sc);
   var rows = applyFilters(cr.rows, S.cf, S.csearch, function(r){ return r.name+' '+r.port; });
   rows = sortRows(rows, S.csort);
+  // group by portfolio, groups ordered by portfolio spend (desc)
+  var groups = {}, order = [];
+  rows.forEach(function(r){
+    if (!groups[r.port]){ groups[r.port]=[]; order.push(r.port); }
+    groups[r.port].push(r);
+  });
+  var gm = {};
+  order.forEach(function(p){
+    var m={impr:0,clicks:0,spend:0,sales:0,orders:0,units:0};
+    groups[p].forEach(function(r){ Engine.M6.forEach(function(k){ m[k]+=r.m[k]; }); });
+    gm[p]=m;
+  });
+  order.sort(function(a,b){ return gm[b].spend-gm[a].spend; });
   var h = fbarHTML('cfbar', CFCOLS, S.cf, S.csearch, false);
   h+='<div class="tblwrap glass"><table><thead><tr><th></th><th class="l">Type</th>'+
      thRow(CCOLS,S.csort)+'</tr></thead><tbody>';
@@ -971,33 +1111,42 @@ function renderCamps(sc){
      '<td>'+fi(t.impr)+'</td><td>'+fi(t.clicks)+'</td><td>'+fp(td.ctr)+'</td><td>'+fc(t.spend)+'</td><td>'+fc(t.sales)+
      '</td><td>'+fi(t.orders)+'</td><td>'+fi(t.units)+'</td><td>'+fp(td.cvr)+'</td><td>'+fp(td.acos)+'</td><td>'+fc(td.cpc)+
      '</td><td>'+fx(td.roas)+'</td><td>'+fc(td.aov)+'</td><td colspan="6"></td></tr>';
-  rows.forEach(function(r){
-    var open = S.open[r.key];
-    h+='<tr><td class="exp" data-k="'+esc(r.key)+'">'+(r.places.length?(open?'▾':'▸'):'')+'</td>'+
-       '<td class="l"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
-       '<td class="l"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
-       '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
-    MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
-    SHCOLS.forEach(function(s){ h+='<td>'+fp(r.sh[s[0]])+'</td>'; });
+  order.forEach(function(port){
+    var m=gm[port], d=Engine.derived(m), sh=Engine.shares(m, t);
+    h+='<tr class="grp"><td></td><td class="l">'+groups[port].length+'</td>'+
+       '<td class="l"><span class="campname" title="'+esc(port)+'">📁 '+esc(port)+'</span></td><td></td><td></td>'+
+       '<td>'+fi(m.impr)+'</td><td>'+fi(m.clicks)+'</td><td>'+fp(d.ctr)+'</td><td>'+fc(m.spend)+'</td><td>'+fc(m.sales)+
+       '</td><td>'+fi(m.orders)+'</td><td>'+fi(m.units)+'</td><td>'+fp(d.cvr)+'</td><td>'+fp(d.acos)+'</td><td>'+fc(d.cpc)+
+       '</td><td>'+fx(d.roas)+'</td><td>'+fc(d.aov)+'</td>';
+    ['is','cs','ss','rs','os','us'].forEach(function(k){ h+='<td>'+fp(sh[k])+'</td>'; });
     h+='</tr>';
-    if (open && r.places.length){
-      r.places.forEach(function(p){
-        h+='<tr class="sub"><td></td><td></td><td class="l pl">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
-        MCOLS.forEach(function(c){
-          var v = (c[3]==='m')?p.m[c[0]]:p.d[c[0]];
-          h+='<td>'+c[2](v)+'</td>';
-        });
-        SHCOLS.forEach(function(s){ h+='<td>'+fp(p.sh[s[0]])+'</td>'; });
-        h+='</tr>';
-      });
-      h+='<tr class="sub tot2"><td></td><td></td><td class="l pl">CAMPAIGN TOTAL</td><td></td><td></td>';
+    groups[port].forEach(function(r){
+      var open = S.open[r.key];
+      h+='<tr><td class="exp" data-k="'+esc(r.key)+'">'+(r.places.length?(open?'▾':'▸'):'')+'</td>'+
+         '<td class="l"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
+         '<td class="l"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
+         '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
       MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
-      h+='<td colspan="6"></td></tr>';
-    }
+      SHCOLS.forEach(function(sx){ h+='<td>'+fp(r.sh[sx[0]])+'</td>'; });
+      h+='</tr>';
+      if (open && r.places.length){
+        r.places.forEach(function(p){
+          h+='<tr class="sub"><td></td><td></td><td class="l pl">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
+          MCOLS.forEach(function(c){
+            var v = (c[3]==='m')?p.m[c[0]]:p.d[c[0]];
+            h+='<td>'+c[2](v)+'</td>';
+          });
+          SHCOLS.forEach(function(sx){ h+='<td>'+fp(p.sh[sx[0]])+'</td>'; });
+          h+='</tr>';
+        });
+        h+='<tr class="sub tot2"><td></td><td></td><td class="l pl">CAMPAIGN TOTAL</td><td></td><td></td>';
+        MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
+        h+='<td colspan="6"></td></tr>';
+      }
+    });
   });
   h+='</tbody></table></div>';
-  if (rows.some(function(r){return r.src==='SP';}))
-    h+='<div class="note">Placement shares are within the campaign. Amazon Business is a B2B subset of the other three SP placements, so a campaign\'s placements can sum past its total.</div>';
+  h+='<div class="note">Campaigns are grouped by portfolio (📁 rows = portfolio totals; their shares are of the whole scope). Campaign shares are of the scope total; placement shares are within their campaign. Amazon Business is a B2B subset of the other three SP placements.</div>';
   return h;
 }
 
@@ -1056,7 +1205,11 @@ function renderTgts(sc){
 function render(){
   var sc = curScope();
   var v = document.getElementById('view');
-  if (S.tab==='dash') v.innerHTML = renderDash(sc);
+  if (S.tab==='agg') v.innerHTML = renderAgg(sc);
+  else if (S.tab==='ports') v.innerHTML = renderPorts(sc);
+  else if (S.tab==='spa') v.innerHTML = renderSPA(sc);
+  else if (S.tab==='sba') v.innerHTML = renderSBA(sc);
+  else if (S.tab==='sda') v.innerHTML = renderSDA(sc);
   else if (S.tab==='camps') v.innerHTML = renderCamps(sc);
   else v.innerHTML = renderTgts(sc);
 
