@@ -39,7 +39,7 @@ nav button.on{background:#fff;color:#2563eb}
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 <div class="wrap">
   <header class="glass">
-    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v9</span></div>
+    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v10</span></div>
     <nav id="nav">
       <button data-tab="agg" class="on">Aggregates</button>
       <button data-tab="ports">Portfolios</button>
@@ -603,7 +603,15 @@ var Engine = (function () {
           if (c.src === 'SP' && p.raw === 'Placement Amazon Business') return;
           addM(pTot, p.m);
         });
-        places.forEach(function (p) { p.sh = shares(p.m, pTot); });
+        places.forEach(function (p) {
+          // the Amazon Business row shows NO shares at all — its traffic is
+          // already counted inside the other three placements
+          if (c.src === 'SP' && p.raw === 'Placement Amazon Business') {
+            p.sh = { is: null, cs: null, ss: null, rs: null, os: null, us: null };
+          } else {
+            p.sh = shares(p.m, pTot);
+          }
+        });
         return {
           key: c.key, src: c.src, fmt: c.fmt, name: c.name, port: c.port,
           state: c.state, budget: c.budget, ttype: c.ttype, bidstrat: c.bidstrat,
@@ -1573,7 +1581,7 @@ function renderPlc(sc){
     }
   });
   h+='</tbody></table></div>';
-  h+='<div class="note">Fixed placement order — SP: Top of Search / Rest of Search / Product Pages / Amazon Business · SB: Top of Search / Detail Page / Home / Other. Placement shares are within their campaign and EXCLUDE Amazon Business from the denominator (it is a B2B subset already counted inside the other three; its own row shows its size relative to them); campaign shares are of the scope. SD campaigns have no placement rows in the bulk file.</div>';
+  h+='<div class="note">Fixed placement order — SP: Top of Search / Rest of Search / Product Pages / Amazon Business · SB: Top of Search / Detail Page / Home / Other. Placement shares are within their campaign; Amazon Business carries no shares — it is a B2B subset already counted inside Top of Search / Rest of Search / Product Pages; campaign shares are of the scope. SD campaigns have no placement rows in the bulk file.</div>';
   return h;
 }
 
