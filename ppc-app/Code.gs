@@ -145,7 +145,7 @@ function getData_() {
     var tz = tzOf_(ss);
     var kv = kw.getDataRange().getValues();
     for (var r = 0; r < kv.length; r++) {
-      var row = kv[r].slice(0, 37);
+      var row = kv[r].slice();
       var any = false;
       for (var c = 0; c < row.length; c++) {
         // calendar string in the sheet's timezone -> no day shift for viewers

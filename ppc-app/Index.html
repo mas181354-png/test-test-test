@@ -39,7 +39,7 @@ nav button.on{background:#fff;color:#2563eb}
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 <div class="wrap">
   <header class="glass">
-    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v10</span></div>
+    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v11</span></div>
     <nav id="nav">
       <button data-tab="agg" class="on">Aggregates</button>
       <button data-tab="ports">Portfolios</button>
@@ -544,7 +544,7 @@ var Engine = (function () {
     var row3 = null;
     kwRaw.forEach(function (r) { if (r.r === 3) row3 = r.v; });
     if (row3) {
-      for (var c = 36; c >= 3; c--) {           // AK (idx 36) .. D (idx 3), newest first
+      for (var c = row3.length - 1; c >= 3; c--) {   // last day column .. D, newest first
         var d = row3[c];
         if (d !== null && d !== undefined && d !== '') kw.days.push({ col: c, date: String(d) });
       }
@@ -555,7 +555,7 @@ var Engine = (function () {
       if (!k || k === ' ') return;
       var lk = k.toLowerCase().replace(/\s+/g, ' ');
       if (kw.map[lk]) return;                    // first match wins
-      kw.map[lk] = { kw: k, sv: r.v[1], sales: r.v[2], ranks: r.v.slice(3, 37) };
+      kw.map[lk] = { kw: k, sv: r.v[1], sales: r.v[2], ranks: r.v.slice(3) };
     });
 
     var portfolios = Object.keys(portSet).sort();
@@ -905,7 +905,7 @@ function load(){
   S._wd2 = setTimeout(function(){
     var l = document.getElementById('load');
     if (!l || l.style.display==='none') return;
-    l.innerHTML = '<div class="pasteerr">⚠ <b>Loading is stuck.</b> The page is fine, but Google never answered the data request. The usual causes:<br><br>'+
+    l.innerHTML = '<div class="pasteerr" style="background:#fef9c3;border-color:#f59e0b;color:#78350f">⏳ <b>Still loading…</b> Large accounts can take a minute or two — the app will appear automatically when the data arrives. If it never does, the usual causes:<br><br>'+
       '1. <b>Wrong Google account</b> — the browser opened this link under a different signed-in account. Open the link in an incognito window signed into ONLY the account that owns the sheet.<br>'+
       '2. <b>Authorization pending</b> — in Apps Script run any function once (e.g. ping) and approve the permission prompt, then Deploy → Manage deployments → ✏ → New version.<br>'+
       '3. <b>Third-party cookies blocked</b> — allow cookies for [*.]google.com, or try another browser/profile.<br><br>'+
@@ -975,7 +975,9 @@ function renderControls(){
   msel('mselCamp','campPane','campCnt',
     inPort.map(function(c){ return {id:c.key,label:c.name,c:c}; }),
     S.selKeys,
-    function(s){ S.selKeys=s; persist(); renderControls(); render(); },
+    function(s){ S.selKeys=s; persist();
+      document.getElementById('campCnt').textContent = s.length ? s.length : 'All';
+      render(); },
     function(it){ return '<span class="chip '+it.c.fmt+'">'+it.c.fmt+'</span> '+esc(it.c.name); });
 }
 
@@ -1013,9 +1015,11 @@ function applyNameW(){
     active=true; window.__resizing=true; startX=e.clientX; startW=S.nameW||300;
     document.body.style.cursor='col-resize';
   }, true);
+  var raf = 0;
   document.addEventListener('mousemove', function(e){
     if(!active) return;
-    S.nameW = startW + (e.clientX-startX); applyNameW();
+    S.nameW = startW + (e.clientX-startX);
+    if(!raf) raf = requestAnimationFrame(function(){ raf = 0; applyNameW(); });
   });
   document.addEventListener('mouseup', function(){
     if(!active) return;
@@ -1473,12 +1477,15 @@ function renderCamps(sc){
   var cr = Engine.campaignRows(sc);
   var rows = applyFilters(cr.rows, S.cf, S.csearch, function(r){ return r.name+' '+r.port; });
   rows = sortRows(rows, S.csort);
+  var CCAP = 1000, cTotal = rows.length, cCapped = cTotal > CCAP;
+  if (cCapped) rows = rows.slice(0, CCAP);
   var FZ = {name:'fz namecol', name_st:'left:62px'};
   var h = fbarHTML('cfbar', CFCOLS, S.cf, S.csearch, false);
+  if (cCapped) h += '<div class="banner">Showing the top '+CCAP+' of '+cTotal.toLocaleString()+' campaigns by the current sort — portfolio 📁 totals still cover every campaign in that portfolio.</div>';
   h = h.replace('</div>', '<span class="spacer"></span>'+
     '<div class="seg" id="cviewSeg"><button data-v="port" class="'+(S.cview==='port'?'on':'')+'">By Portfolio</button>'+
     '<button data-v="flat" class="'+(S.cview==='flat'?'on':'')+'">All Campaigns</button></div>'+
-    '<span class="dim">'+rows.length+' campaigns</span></div>');
+    '<span class="dim">'+(cCapped? rows.length+' of '+cTotal : rows.length)+' campaigns</span></div>');
   var THEAD='<div class="tblwrap glass"><table><thead><tr>'+
      '<th class="l fz" style="left:0;width:62px">Type</th>'+
      thRow(CCOLS,S.csort,'',FZ)+'</tr></thead><tbody>';
@@ -1500,11 +1507,12 @@ function renderCamps(sc){
       if (!groups[r.port]){ groups[r.port]=[]; order.push(r.port); }
       groups[r.port].push(r);
     });
-    var gm = {};
-    order.forEach(function(p){
-      var m={impr:0,clicks:0,spend:0,sales:0,orders:0,units:0};
-      groups[p].forEach(function(r){ Engine.M6.forEach(function(k){ m[k]+=r.m[k]; }); });
-      gm[p]=m;
+    var gm = {}, gn = {};
+    cr.rows.forEach(function(r){                 // totals over ALL campaigns of the portfolio
+      if (!groups[r.port]) return;
+      if (!gm[r.port]) { gm[r.port]={impr:0,clicks:0,spend:0,sales:0,orders:0,units:0}; gn[r.port]=0; }
+      gn[r.port]++;
+      Engine.M6.forEach(function(k){ gm[r.port][k]+=r.m[k]; });
     });
     order.sort(function(a,b){ return gm[b].spend-gm[a].spend; });
     order.forEach(function(port){
@@ -1541,15 +1549,23 @@ function renderPlc(sc){
   if (S.ptype==='sb') rows = rows.filter(function(r){ return r.src==='SB'; });
   rows = applyFilters(rows, S.pf, S.psearch, function(r){ return r.name+' '+r.port; });
   rows = sortRows(rows, S.psort);
+  if (!S._plcAuto){
+    S._plcAuto = true;
+    if (rows.length > 50) rows.forEach(function(r){ S.pclosed[r.key] = true; });
+  }
+  var PCAP = 800, pTotal = rows.length, pCapped = pTotal > PCAP;
+  if (pCapped) rows = rows.slice(0, PCAP);
   var FZ = {name:'fz namecol', name_st:'left:88px'};
   var h = fbarHTML('pfbar', CFCOLS, S.pf, S.psearch, false);
+  if (pCapped) h += '<div class="banner">Showing the top '+PCAP+' of '+pTotal.toLocaleString()+' campaigns by the current sort — narrow with search or filters.</div>';
+  else if (pTotal > 50) h += '<div class="note" style="margin:-4px 0 10px">'+pTotal+' campaigns — placements start collapsed at this size; use ⊞ Expand all or the ▸ arrows.</div>';
   h = h.replace('</div>', '<span class="spacer"></span>'+
     '<div class="seg" id="ptypeSeg"><button data-v="all" class="'+(S.ptype==='all'?'on':'')+'">All</button>'+
     '<button data-v="sp" class="'+(S.ptype==='sp'?'on':'')+'">SP</button>'+
     '<button data-v="sb" class="'+(S.ptype==='sb'?'on':'')+'">SB</button></div>'+
     '<button class="hbtn" id="plcExpand">⊞ Expand all</button>'+
     '<button class="hbtn" id="plcCollapse">⊟ Collapse all</button>'+
-    '<span class="dim">'+rows.length+' campaigns</span></div>');
+    '<span class="dim">'+(pCapped? rows.length+' of '+pTotal : rows.length)+' campaigns</span></div>');
   h+='<div class="tblwrap glass"><table><thead><tr>'+
      '<th class="fz" style="left:0;width:26px"></th>'+
      '<th class="l fz" style="left:26px;width:62px">Type</th>'+
@@ -1601,6 +1617,8 @@ function renderTgts(sc){
   rows = applyFilters(rows, S.tf, S.tsearch,
     function(r){ return r.target+' '+r.camp+' '+r.match; });
   rows = sortRows(rows, S.tsort);
+  var CAP = 1000, totalRows = rows.length, capped = totalRows > CAP;
+  if (capped) rows = rows.slice(0, CAP);
   var days = S.model.kw.days;
   var FZ = {target:'fz namecol', target_st:'left:62px'};
   var h = fbarHTML('tfbar', TFCOLS, S.tf, S.tsearch, true);
@@ -1620,6 +1638,9 @@ function renderTgts(sc){
                 : 'The KW TRACKED tab is empty — paste your rank-tracking data there (keywords in column A from row 5, dates in row 3) and hit Refresh.')+'</div>';
     }
   }
+  if (capped){
+    h += '<div class="banner">Showing the top '+CAP+' of '+totalRows.toLocaleString()+' targets by the current sort — use search, the class chips or column filters to narrow. Totals cover ALL targets in scope.</div>';
+  }
   var hmHead='';
   if (S.heat){
     hmHead=days.map(function(d){
@@ -1632,7 +1653,7 @@ function renderTgts(sc){
   h+='<div class="tblwrap glass"><table><thead><tr><th class="l fz" style="left:0;width:62px">Type</th>'+
      thRow(TCOLS,S.tsort,hmHead,FZ)+'</tr></thead><tbody>';
   var t=tr.total, td=tr.totalD;
-  h+='<tr class="tot"><td class="l fz" style="left:0">'+rows.length+' targets</td>'+
+  h+='<tr class="tot"><td class="l fz" style="left:0">'+(capped? rows.length+' of '+totalRows : rows.length)+' targets</td>'+
      '<td class="l fz namecol" style="left:62px">TOTAL — scope</td><td></td><td></td><td></td><td></td><td></td>'+
      '<td>'+fi(t.impr)+'</td><td>'+fi(t.clicks)+'</td><td>'+fp(td.ctr)+'</td><td>'+fc(t.spend)+'</td><td>'+fc(t.sales)+
      '</td><td>'+fi(t.orders)+'</td><td>'+fi(t.units)+'</td><td>'+fp(td.cvr)+'</td><td>'+fp(td.acos)+'</td><td>'+fc(td.cpc)+
