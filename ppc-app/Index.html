@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PPC Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#2563eb; --sky:#0ea5e9; --ink:#0f2c5f; --mut:#64748b;
+  --glass:rgba(255,255,255,.55); --glass2:rgba(255,255,255,.72);
+  --bord:rgba(255,255,255,.75); --shadow:0 8px 32px rgba(37,99,235,.13);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Inter',system-ui,sans-serif;color:var(--ink);
+  background:linear-gradient(160deg,#dbeffe 0%,#e8f3ff 38%,#f4f9ff 70%,#ffffff 100%);
+  background-attachment:fixed;min-height:100vh;font-size:13px;
+}
+.blob{position:fixed;border-radius:50%;filter:blur(90px);opacity:.5;z-index:0;pointer-events:none}
+.b1{width:480px;height:480px;background:#93c5fd;top:-140px;left:-120px}
+.b2{width:420px;height:420px;background:#bae6fd;bottom:-160px;right:-100px}
+.b3{width:300px;height:300px;background:#e0e7ff;top:40%;left:55%}
+.wrap{position:relative;z-index:1;max-width:1560px;margin:0 auto;padding:14px 18px 60px}
+
+/* ---------- glass primitives ---------- */
+.glass{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:1px solid var(--bord);border-radius:16px;box-shadow:var(--shadow)}
+.card{padding:16px;overflow-x:auto}
+.card h3{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--blue);margin-bottom:10px}
+.note{font-size:11px;color:var(--mut);font-style:italic;margin-top:8px}
+
+/* ---------- header ---------- */
+header{position:sticky;top:10px;z-index:50;display:flex;flex-wrap:wrap;gap:10px;
+  align-items:center;padding:10px 16px;margin-bottom:16px}
+.logo{display:flex;align-items:center;gap:9px;font-weight:800;font-size:16px;letter-spacing:-.01em}
+.logo .dot{width:30px;height:30px;border-radius:9px;flex:0 0 30px;
+  background:linear-gradient(135deg,var(--blue),var(--sky));
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+nav{display:flex;gap:4px;background:rgba(219,234,254,.6);border-radius:12px;padding:4px}
+nav button{border:0;background:transparent;padding:7px 16px;border-radius:9px;cursor:pointer;
+  font:600 12.5px 'Inter';color:var(--ink)}
+nav button.on{background:#fff;color:var(--blue);box-shadow:0 2px 8px rgba(37,99,235,.18)}
+.spacer{flex:1}
+.hbtn{border:1px solid rgba(37,99,235,.25);background:var(--glass2);color:var(--blue);
+  font:600 12px 'Inter';padding:8px 14px;border-radius:10px;cursor:pointer}
+.hbtn:hover{background:#fff}
+.stamp{font-size:10.5px;color:var(--mut)}
+
+/* ---------- multiselect dropdown ---------- */
+.msel{position:relative}
+.msel>button{display:flex;align-items:center;gap:7px;max-width:280px;border:1px solid rgba(37,99,235,.25);
+  background:var(--glass2);padding:8px 12px;border-radius:10px;cursor:pointer;font:600 12px 'Inter';color:var(--ink)}
+.msel>button .cnt{background:var(--blue);color:#fff;border-radius:999px;padding:1px 8px;font-size:10.5px}
+.msel .pane{position:absolute;top:calc(100% + 6px);left:0;min-width:320px;max-width:430px;z-index:60;
+  padding:10px;display:none;max-height:380px;overflow:auto}
+.msel.open .pane{display:block}
+.pane .srch{width:100%;padding:7px 10px;border-radius:8px;border:1px solid #dbeafe;
+  background:#fff;font:12px 'Inter';margin-bottom:8px}
+.pane label{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12px}
+.pane label:hover{background:rgba(219,234,254,.55)}
+.pane input{accent-color:var(--blue);margin-top:2px}
+.pane .tools{display:flex;gap:8px;margin-bottom:6px}
+.pane .tools button{flex:1;border:0;background:rgba(219,234,254,.7);border-radius:7px;
+  padding:5px;font:600 11px 'Inter';color:var(--blue);cursor:pointer}
+
+/* ---------- KPI cards ---------- */
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px;margin-bottom:16px}
+.kpi{padding:12px 14px}
+.kpi .l{font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--mut);text-transform:uppercase}
+.kpi .v{font-size:19px;font-weight:800;margin-top:3px;letter-spacing:-.02em}
+.kpi .s{font-size:10.5px;color:var(--sky);font-weight:600}
+
+/* ---------- dashboard grid ---------- */
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.c12{grid-column:span 12}.c8{grid-column:span 8}.c6{grid-column:span 6}.c4{grid-column:span 4}
+@media(max-width:1100px){.c8,.c6,.c4{grid-column:span 12}}
+
+/* ---------- tables ---------- */
+.tblwrap{overflow:auto;border-radius:12px}
+table{border-collapse:separate;border-spacing:0;width:100%;font-size:12px;white-space:nowrap}
+th{position:sticky;top:0;background:linear-gradient(135deg,#2563eb,#0ea5e9);color:#fff;
+  font:700 10.5px 'Inter';letter-spacing:.05em;padding:8px 9px;text-align:right;cursor:pointer;z-index:5}
+th.l{text-align:left}
+th .arr{opacity:.85;font-size:9px}
+td{padding:6px 9px;border-bottom:1px solid rgba(191,219,254,.45);text-align:right;
+  font-variant-numeric:tabular-nums}
+td.l{text-align:left}
+tbody tr:hover td{background:rgba(219,234,254,.35)}
+tr.tot td{background:rgba(219,234,254,.6);font-weight:700;border-top:2px solid rgba(37,99,235,.35)}
+tr.sub td{background:rgba(240,249,255,.72);color:#1e3a5f;font-size:11.5px}
+tr.sub.tot2 td{background:rgba(219,234,254,.85);font-weight:700}
+.exp{cursor:pointer;color:var(--blue);font-weight:800;width:26px;text-align:center;user-select:none}
+.chip{display:inline-block;padding:2px 8px;border-radius:999px;font:700 10px 'Inter';color:#fff}
+.chip.SP{background:#2563eb}.chip.SB{background:#7c3aed}.chip.SBV{background:#db2777}.chip.SD{background:#0d9488}
+.st{display:inline-block;padding:1px 7px;border-radius:999px;font:600 10px 'Inter'}
+.st.enabled{background:#dcfce7;color:#15803d}.st.paused{background:#fef9c3;color:#a16207}
+.st.archived{background:#fee2e2;color:#b91c1c}.st.other{background:#e2e8f0;color:#475569}
+.sub .pl{padding-left:34px;color:#334155}
+.dim{color:var(--mut);font-size:10.5px}
+.campname{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+
+/* ---------- filters bar ---------- */
+.fbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;margin-bottom:12px}
+.fbar select,.fbar input{border:1px solid #dbeafe;background:#fff;border-radius:8px;
+  padding:6px 9px;font:12px 'Inter';color:var(--ink)}
+.fbar input.val{width:90px}
+.fbar input.txt{width:200px}
+.fchip{display:flex;gap:6px;align-items:center;background:rgba(37,99,235,.1);color:var(--blue);
+  border:1px solid rgba(37,99,235,.3);border-radius:999px;padding:4px 10px;font:600 11px 'Inter'}
+.fchip b{cursor:pointer}
+.tgl{display:flex;align-items:center;gap:6px;font:600 11.5px 'Inter';color:var(--blue);cursor:pointer}
+.tgl input{accent-color:var(--blue)}
+
+/* ---------- heatmap ---------- */
+td.hm{padding:4px 5px;text-align:center;font-size:10.5px;min-width:30px}
+.b3{background:#93c47d}.b10{background:#b6d7a8}.b20{background:#ffe599}.b48{background:#f9cb9c}
+.b100{background:#e69138;color:#fff}.b305{background:#ea9999}.b306{background:#e06666;color:#fff}
+.nf{background:#d5a6bd}
+th.hmh{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;padding:6px 3px;font-size:9.5px}
+
+/* ---------- bars & donut ---------- */
+.bar{display:flex;align-items:center;gap:8px;margin:5px 0}
+.bar .lb{width:120px;font-size:11px;font-weight:600;text-align:right;color:#334155}
+.bar .tr{flex:1;background:rgba(191,219,254,.4);height:14px;border-radius:7px;overflow:hidden}
+.bar .fl{height:100%;border-radius:7px;background:linear-gradient(90deg,var(--blue),var(--sky))}
+.bar .vl{width:90px;font-size:11px;font-weight:700}
+.donutbox{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.leg{font-size:11.5px}.leg div{display:flex;gap:7px;align-items:center;margin:3px 0}
+.leg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.mini{width:100%;font-size:11.5px}
+.mini td,.mini th{padding:5px 7px}
+.mini th{position:static;border-radius:0}
+#load{display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;height:60vh}
+.spin{width:44px;height:44px;border-radius:50%;border:4px solid #dbeafe;border-top-color:var(--blue);
+  animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+<div class="wrap">
+  <header class="glass">
+    <div class="logo"><div class="dot">◈</div>PPC Command Center</div>
+    <nav id="nav">
+      <button data-tab="dash" class="on">Dashboard</button>
+      <button data-tab="camps">Campaigns</button>
+      <button data-tab="tgts">Targets</button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="msel" id="mselPort">
+      <button><span>Portfolios</span><span class="cnt" id="portCnt">All</span> ▾</button>
+      <div class="pane glass" id="portPane"></div>
+    </div>
+    <div class="msel" id="mselCamp">
+      <button><span>Campaigns</span><span class="cnt" id="campCnt">All</span> ▾</button>
+      <div class="pane glass" id="campPane"></div>
+    </div>
+    <button class="hbtn" id="refresh">⟳ Refresh</button>
+    <span class="stamp" id="stamp"></span>
+  </header>
+  <div id="load"><div class="spin"></div><div style="font-weight:600;color:var(--blue)">Loading your PPC data…</div></div>
+  <div id="view" style="display:none"></div>
+</div>
+
+<script>
+/**
+ * PPC analysis engine — a 1:1 JavaScript port of the verified COMPAIGN TREE
+ * workbook logic (V16). Pure functions, no DOM: runs in the browser (web app)
+ * and under Node (ground-truth tests).
+ *
+ * Input: the payload produced by Code.gs getData() — for each sheet an array
+ * of row objects {r: <1-based sheet row>, v: [<cell values>]} covering every
+ * non-empty row, plus nothing else. Column positions are resolved from the
+ * row-2 headers by NAME, so re-pasted reports survive column reordering.
+ */
+var Engine = (function () {
+  'use strict';
+
+  var M6 = ['impr', 'clicks', 'spend', 'sales', 'orders', 'units'];
+
+  // currency-text cleaner (same as the workbook's VALUE(SUBSTITUTE(...)) chain)
+  function num(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    if (typeof v === 'number') return v;
+    var s = String(v).replace(/[£$€,\s]/g, '');
+    var f = parseFloat(s);
+    return isNaN(f) ? 0 : f;
+  }
+  function str(v) { return (v === null || v === undefined) ? '' : String(v).trim(); }
+
+  function headerMap(rows) {
+    var hdr = null;
+    for (var i = 0; i < rows.length; i++) if (rows[i].r === 2) { hdr = rows[i].v; break; }
+    if (!hdr) return {};
+    var map = {};
+    for (var c = 0; c < hdr.length; c++) {
+      var h = str(hdr[c]);
+      if (h && !(h in map)) map[h] = c;
+    }
+    return map;
+  }
+  function getter(rows) {
+    var map = headerMap(rows);
+    return function (rowV, name) {
+      var c = map[name];
+      return c === undefined ? '' : rowV[c];
+    };
+  }
+
+  function zeroM() {
+    return { impr: 0, clicks: 0, spend: 0, sales: 0, orders: 0, units: 0 };
+  }
+  function metricsOf(g, v) {
+    return {
+      impr: num(g(v, 'Impressions')), clicks: num(g(v, 'Clicks')),
+      spend: num(g(v, 'Spend')), sales: num(g(v, 'Sales')),
+      orders: num(g(v, 'Orders')), units: num(g(v, 'Units'))
+    };
+  }
+  function addM(a, b) { for (var i = 0; i < M6.length; i++) a[M6[i]] += b[M6[i]]; return a; }
+
+  // derived ratios — identical to the sheet formulas (blank when denominator 0)
+  function derived(m) {
+    return {
+      ctr: m.impr ? m.clicks / m.impr : null,
+      cvr: m.clicks ? m.orders / m.clicks : null,
+      acos: m.sales ? m.spend / m.sales : null,
+      cpc: m.clicks ? m.spend / m.clicks : null,
+      roas: m.spend ? m.sales / m.spend : null,
+      aov: m.orders ? m.sales / m.orders : null,
+      cpa: m.orders ? m.spend / m.orders : null
+    };
+  }
+  function shares(m, tot) {
+    var out = {};
+    var keys = { is: 'impr', cs: 'clicks', ss: 'spend', rs: 'sales', os: 'orders', us: 'units' };
+    for (var k in keys) out[k] = tot[keys[k]] ? m[keys[k]] / tot[keys[k]] : null;
+    return out;
+  }
+
+  // match-type classification (ported from the ST/Targets logic)
+  function classifyTarget(match, expr) {
+    var mt = str(match).toLowerCase();
+    if (mt === 'exact') return 'Exact';
+    if (mt === 'phrase') return 'Phrase';
+    if (mt === 'broad') return 'Broad';
+    if (mt) return str(match);
+    var e = str(expr).toLowerCase();
+    if (e.indexOf('asin-expanded=') === 0 || e.indexOf('asin-expanded =') === 0) return 'ASIN Expanded';
+    if (e.indexOf('asin=') === 0 || e.indexOf('asin =') === 0) return 'ASIN';
+    if (e.indexOf('category=') === 0) return 'Category';
+    if (e === 'close-match' || e === 'loose-match' || e === 'complements' || e === 'substitutes') return 'Auto';
+    if (e) return 'Other';
+    return '';
+  }
+
+  var SP_PLACES = [
+    ['Placement top', 'Top of Search'],
+    ['Placement rest of search', 'Rest of Search'],
+    ['Placement product page', 'Product Pages'],
+    ['Placement Amazon Business', 'Amazon Business']
+  ];
+  var SB_PLACES = [
+    ['Top of search', 'Top of Search'],
+    ['Detail page', 'Detail Page'],
+    ['Home', 'Home'],
+    ['Other', 'Other']
+  ];
+
+  // ---------------------------------------------------------------- parse
+  function parse(raw) {
+    var campaigns = [], targets = [], byKey = {};
+    var portSet = {};
+
+    function portOf(v) { return v ? String(v) : '(No Portfolio)'; }
+    function addCampaign(c) {
+      c.placements = {};        // raw place -> {pct, m}
+      c.nkw = 0; c.npt = 0;
+      campaigns.push(c);
+      byKey[c.key] = c;
+      portSet[c.port] = true;
+    }
+
+    // ---- SP ----
+    var sp = raw['Upload SP'] || [];
+    var g = getter(sp);
+    var videoCids = {};
+    sp.forEach(function (row) {
+      if (row.r < 3) return;
+      var v = row.v, ent = str(g(v, 'Entity'));
+      if (!ent) return;
+      var cid = str(g(v, 'Campaign ID')), key = 'SP:' + cid;
+      if (ent === 'Campaign') {
+        addCampaign({
+          key: key, src: 'SP', fmt: 'SP', cid: cid,
+          name: str(g(v, 'Campaign name (Informational only)')),
+          port: portOf(str(g(v, 'Portfolio name (Informational only)'))),
+          state: str(g(v, 'State')).toLowerCase(),
+          budget: num(g(v, 'Daily budget')),
+          ttype: str(g(v, 'Targeting type')),
+          bidstrat: str(g(v, 'Bidding strategy')),
+          m: metricsOf(g, v)
+        });
+      } else if (ent === 'Bidding adjustment') {
+        var c = byKey[key];
+        if (!c) return;
+        var pl = str(g(v, 'Placement'));
+        if (!c.placements[pl]) c.placements[pl] = { pct: 0, m: zeroM() };
+        c.placements[pl].pct += num(g(v, 'Percentage'));
+        addM(c.placements[pl].m, metricsOf(g, v));
+      } else if (ent === 'Keyword' || ent === 'Product targeting') {
+        var cc = byKey[key];
+        if (cc) { if (ent === 'Keyword') cc.nkw++; else cc.npt++; }
+        var kw = str(g(v, 'Keyword text'));
+        var expr = str(g(v, 'Product targeting expression'));
+        targets.push({
+          src: 'SP', key: key, cid: cid,
+          camp: cc ? cc.name : '', port: cc ? cc.port : '(No Portfolio)',
+          adgroup: str(g(v, 'Ad group name (Informational only)')),
+          target: kw || expr,
+          match: classifyTarget(g(v, 'Match type'), expr),
+          bid: num(g(v, 'Bid')),
+          states: {
+            c: str(g(v, 'Campaign state (Informational only)')) || (cc ? cc.state : ''),
+            g: str(g(v, 'Ad Group State (Informational only)')),
+            t: str(g(v, 'State'))
+          },
+          m: metricsOf(g, v)
+        });
+      }
+    });
+
+    // ---- SB ----
+    var sb = raw['Upload SB'] || [];
+    g = getter(sb);
+    sb.forEach(function (row) {
+      if (row.r < 3) return;
+      var v = row.v, ent = str(g(v, 'Entity'));
+      if (!ent) return;
+      var cid = str(g(v, 'Campaign ID')), key = 'SB:' + cid;
+      if (ent === 'Campaign') {
+        addCampaign({
+          key: key, src: 'SB', fmt: 'SB', cid: cid,
+          name: str(g(v, 'Campaign name (Informational only)')),
+          port: portOf(str(g(v, 'Portfolio name (Informational only)'))),
+          state: str(g(v, 'State')).toLowerCase(),
+          budget: num(g(v, 'Budget')),
+          ttype: '', bidstrat: str(g(v, 'Bid optimisation')),
+          m: metricsOf(g, v)
+        });
+      } else if (ent === 'Video ad') {
+        videoCids[key] = true;
+      } else if (ent === 'Bidding adjustment by placement') {
+        var c = byKey[key];
+        if (!c) return;
+        var pl = str(g(v, 'Placement'));
+        if (!c.placements[pl]) c.placements[pl] = { pct: 0, m: zeroM() };
+        c.placements[pl].pct += num(g(v, 'Percentage'));
+        addM(c.placements[pl].m, metricsOf(g, v));
+      } else if (ent === 'Keyword' || ent === 'Product targeting') {
+        var cc = byKey[key];
+        var kw = str(g(v, 'Keyword text'));
+        var expr = str(g(v, 'Product targeting expression'));
+        targets.push({
+          src: 'SB', key: key, cid: cid,
+          camp: cc ? cc.name : '', port: cc ? cc.port : '(No Portfolio)',
+          adgroup: str(g(v, 'Ad group name (Informational only)')),
+          target: kw || expr,
+          match: classifyTarget(g(v, 'Match type'), expr),
+          bid: num(g(v, 'Bid')),
+          states: {
+            c: str(g(v, 'Campaign state (Informational only)')) || (cc ? cc.state : ''),
+            g: str(g(v, 'Ad group serving status (Informational only)')),
+            t: str(g(v, 'State'))
+          },
+          m: metricsOf(g, v)
+        });
+      }
+    });
+    campaigns.forEach(function (c) {
+      if (c.src === 'SB' && videoCids[c.key]) c.fmt = 'SBV';
+    });
+
+    // ---- SD ----
+    var sd = raw['Upload SD'] || [];
+    g = getter(sd);
+    sd.forEach(function (row) {
+      if (row.r < 3) return;
+      var v = row.v, ent = str(g(v, 'Entity'));
+      if (!ent) return;
+      var cid = str(g(v, 'Campaign ID')), key = 'SD:' + cid;
+      if (ent === 'Campaign') {
+        addCampaign({
+          key: key, src: 'SD', fmt: 'SD', cid: cid,
+          name: str(g(v, 'Campaign name (Informational only)')),
+          port: portOf(str(g(v, 'Portfolio name (Informational only)'))),
+          state: str(g(v, 'State')).toLowerCase(),
+          budget: num(g(v, 'Budget')),
+          ttype: str(g(v, 'Tactic')), bidstrat: str(g(v, 'Bid optimisation')),
+          m: metricsOf(g, v)
+        });
+      } else if (ent === 'Audience targeting' || ent === 'Contextual targeting'
+                 || ent === 'Product targeting') {
+        var cc = byKey[key];
+        var expr = str(g(v, 'Targeting expression')) ||
+                   str(g(v, 'Product targeting expression'));
+        var label = ent === 'Audience targeting' ? 'Audience' :
+                    ent === 'Contextual targeting' ? 'Contextual' :
+                    classifyTarget('', expr) || 'Product';
+        targets.push({
+          src: 'SD', key: key, cid: cid,
+          camp: cc ? cc.name : '', port: cc ? cc.port : '(No Portfolio)',
+          adgroup: str(g(v, 'Ad group name (Informational only)')),
+          target: expr || ent,
+          match: label,
+          bid: num(g(v, 'Bid')),
+          states: {
+            c: str(g(v, 'Campaign state (Informational only)')) || (cc ? cc.state : ''),
+            g: str(g(v, 'Ad Group State (Informational only)')),
+            t: str(g(v, 'State'))
+          },
+          m: metricsOf(g, v)
+        });
+      }
+    });
+
+    // SP campaign structure (SKC/MKC/SAC/MAC/Mixed)
+    campaigns.forEach(function (c) {
+      if (c.src !== 'SP') { c.structure = ''; return; }
+      if (c.nkw > 0 && c.npt > 0) c.structure = 'Mixed';
+      else if (c.nkw > 0) c.structure = c.nkw === 1 ? 'SKC' : 'MKC';
+      else if (c.npt > 0) c.structure = c.npt === 1 ? 'SAC' : 'MAC';
+      else c.structure = '—';
+    });
+
+    // ---- KW TRACKED ----
+    var kwRaw = raw['KW TRACKED'] || [];
+    var kw = { days: [], map: {} };
+    var row3 = null;
+    kwRaw.forEach(function (r) { if (r.r === 3) row3 = r.v; });
+    if (row3) {
+      for (var c = 36; c >= 3; c--) {           // AK (idx 36) .. D (idx 3), newest first
+        var d = row3[c];
+        if (d !== null && d !== undefined && d !== '') kw.days.push({ col: c, date: String(d) });
+      }
+    }
+    kwRaw.forEach(function (r) {
+      if (r.r < 5) return;
+      var k = str(r.v[0]);
+      if (!k || k === ' ') return;
+      var lk = k.toLowerCase();
+      if (kw.map[lk]) return;                    // first match wins
+      kw.map[lk] = { kw: k, sv: r.v[1], sales: r.v[2], ranks: r.v.slice(3, 37) };
+    });
+
+    var portfolios = Object.keys(portSet).sort();
+    return { campaigns: campaigns, targets: targets, kw: kw, portfolios: portfolios };
+  }
+
+  // ---------------------------------------------------------------- scope
+  // selPorts: [] or null = all portfolios; selKeys: [] or null = all campaigns
+  function scope(model, selPorts, selKeys) {
+    var pset = selPorts && selPorts.length ? toSet(selPorts) : null;
+    var kset = selKeys && selKeys.length ? toSet(selKeys) : null;
+    function inScope(c) {
+      if (pset && !pset[c.port]) return false;
+      if (kset && !kset[c.key]) return false;
+      return true;
+    }
+    var camps = model.campaigns.filter(inScope);
+    var ckeys = toSet(camps.map(function (c) { return c.key; }));
+    var tgts = model.targets.filter(function (t) { return ckeys[t.key]; });
+    return { campaigns: camps, targets: tgts, keys: ckeys };
+  }
+  function toSet(arr) { var s = {}; arr.forEach(function (x) { s[x] = true; }); return s; }
+
+  function totalM(items) {
+    var t = zeroM();
+    items.forEach(function (x) { addM(t, x.m); });
+    return t;
+  }
+
+  // ------------------------------------------------------- table builders
+  // Campaigns table rows (spend-desc), each with derived + shares vs scope
+  function campaignRows(sc) {
+    var tot = totalM(sc.campaigns);
+    var rows = sc.campaigns.slice().sort(function (a, b) { return b.m.spend - a.m.spend; })
+      .map(function (c) {
+        var placeOrder = c.src === 'SP' ? SP_PLACES : c.src === 'SB' ? SB_PLACES : [];
+        var places = placeOrder.map(function (p) {
+          var got = c.placements[p[0]] || { pct: 0, m: zeroM() };
+          return { raw: p[0], label: p[1], pct: got.pct, m: got.m, d: derived(got.m) };
+        });
+        var pTot = zeroM();
+        places.forEach(function (p) { addM(pTot, p.m); });
+        places.forEach(function (p) { p.sh = shares(p.m, pTot); });
+        return {
+          key: c.key, src: c.src, fmt: c.fmt, name: c.name, port: c.port,
+          state: c.state, budget: c.budget, ttype: c.ttype, bidstrat: c.bidstrat,
+          structure: c.structure,
+          m: c.m, d: derived(c.m), sh: shares(c.m, tot),
+          places: places
+        };
+      });
+    return { rows: rows, total: tot, totalD: derived(tot) };
+  }
+
+  // Targets table rows (spend-desc, stable by source order like the sheet)
+  function targetRows(sc, kwModel) {
+    var tot = totalM(sc.targets);
+    var idx = 0;
+    var arr = sc.targets.map(function (t) { return { t: t, i: idx++ }; });
+    arr.sort(function (a, b) {
+      return (b.t.m.spend - a.t.m.spend) || (a.i - b.i);
+    });
+    var rows = arr.map(function (x) {
+      var t = x.t;
+      var hm = null;
+      if (kwModel && t.target) {
+        var rec = kwModel.map[String(t.target).trim().toLowerCase()];
+        hm = rec ? { sv: rec.sv, sales: rec.sales, ranks: kwModel.days.map(function (d) {
+          var v = rec.ranks[d.col - 3];
+          return (v === null || v === undefined) ? '' : v;
+        }) } : 'NF';
+      }
+      return {
+        src: t.src, camp: t.camp, port: t.port, adgroup: t.adgroup,
+        target: t.target, match: t.match, bid: t.bid,
+        stateLine: 'Campaign: ' + (t.states.c || '?') +
+                   ' | Ad group: ' + (t.states.g || '?') +
+                   ' | Target: ' + (t.states.t || '?'),
+        states: t.states,
+        m: t.m, d: derived(t.m), sh: shares(t.m, tot), hm: hm
+      };
+    });
+    return { rows: rows, total: tot, totalD: derived(tot) };
+  }
+
+  // heat bucket for a rank cell — the V10 color buckets
+  function heatBucket(v) {
+    if (v === '' || v === null || v === undefined) return '';
+    if (v === 'NF') return 'nf';
+    var s = String(v);
+    if (s.indexOf('>') === 0) return 'b306';
+    var n = num(v);
+    if (!n) return '';
+    if (n <= 3) return 'b3';
+    if (n <= 10) return 'b10';
+    if (n <= 20) return 'b20';
+    if (n <= 48) return 'b48';
+    if (n <= 100) return 'b100';
+    if (n <= 305) return 'b305';
+    return 'b306';
+  }
+
+  // ------------------------------------------------------------ aggregates
+  function seg(items, pred) {
+    var grp = items.filter(pred);
+    var m = totalM(grp);
+    return { n: grp.length, m: m, d: derived(m) };
+  }
+  function aggregates(sc) {
+    var camps = sc.campaigns, tgts = sc.targets;
+    var out = {};
+    out.total = seg(camps, function () { return true; });
+    out.adTypes = [
+      ['Sponsored Products (SP)', seg(camps, function (c) { return c.src === 'SP'; })],
+      ['Sponsored Brands (SB)', seg(camps, function (c) { return c.fmt === 'SB' && c.src === 'SB'; })],
+      ['Sponsored Brands Video (SBV)', seg(camps, function (c) { return c.fmt === 'SBV'; })],
+      ['Sponsored Display (SD)', seg(camps, function (c) { return c.src === 'SD'; })]
+    ];
+    function states(pred) {
+      return ['enabled', 'paused', 'archived'].map(function (st) {
+        return [st.charAt(0).toUpperCase() + st.slice(1),
+                seg(camps, function (c) { return pred(c) && c.state === st; })];
+      });
+    }
+    out.stateAll = states(function () { return true; });
+    out.stateSP = states(function (c) { return c.src === 'SP'; });
+    out.stateSB = states(function (c) { return c.src === 'SB'; });
+    out.stateSD = states(function (c) { return c.src === 'SD'; });
+
+    // per-portfolio (within scope)
+    var ports = {};
+    camps.forEach(function (c) { ports[c.port] = true; });
+    out.portfolios = Object.keys(ports).sort().map(function (p) {
+      return [p, seg(camps, function (c) { return c.port === p; })];
+    });
+
+    // SP placements (placement-row attribution, Amazon Business = B2B subset)
+    function placeSeg(src, raw) {
+      var n = 0, m = zeroM();
+      camps.forEach(function (c) {
+        if (c.src !== src) return;
+        var p = c.placements[raw];
+        if (p) { n++; addM(m, p.m); }
+      });
+      return { n: n, m: m, d: derived(m) };
+    }
+    out.spPlacements = SP_PLACES.map(function (p) { return [p[1], placeSeg('SP', p[0])]; });
+    out.sbPlacements = SB_PLACES.map(function (p) { return [p[1], placeSeg('SB', p[0])]; });
+
+    // SP match/target types — target-level attribution (like the sheet)
+    var spT = tgts.filter(function (t) { return t.src === 'SP'; });
+    var MT = ['Exact', 'Phrase', 'Broad', 'ASIN', 'ASIN Expanded', 'Category', 'Auto', 'Other'];
+    out.spMatchTypes = MT.map(function (mt) {
+      return [mt, seg(spT, function (t) { return t.match === mt; })];
+    });
+
+    // SP bidding strategies / targeting type / structure — campaign level
+    var spC = camps.filter(function (c) { return c.src === 'SP'; });
+    var strat = {};
+    spC.forEach(function (c) { strat[c.bidstrat || '—'] = true; });
+    out.spBidding = Object.keys(strat).sort().map(function (s) {
+      return [s, seg(spC, function (c) { return (c.bidstrat || '—') === s; })];
+    });
+    out.spTargeting = ['Manual', 'Auto'].map(function (tt) {
+      return [tt, seg(spC, function (c) { return str(c.ttype).toLowerCase() === tt.toLowerCase(); })];
+    });
+    out.spStructure = ['SKC', 'MKC', 'SAC', 'MAC', 'Mixed'].map(function (s) {
+      return [s, seg(spC, function (c) { return c.structure === s; })];
+    });
+
+    // SB ad format
+    out.sbFormats = [
+      ['Product Collection / Other', seg(camps, function (c) { return c.src === 'SB' && c.fmt === 'SB'; })],
+      ['Video', seg(camps, function (c) { return c.fmt === 'SBV'; })]
+    ];
+
+    // SD targeting (target-level)
+    var sdT = tgts.filter(function (t) { return t.src === 'SD'; });
+    out.sdTargeting = ['Contextual', 'Audience'].map(function (lab) {
+      return [lab, seg(sdT, function (t) { return t.match === lab; })];
+    });
+
+    // Targets match-type mix across all ad types (bonus card)
+    out.targetMatchAll = MT.concat(['Audience', 'Contextual']).map(function (mt) {
+      return [mt, seg(tgts, function (t) { return t.match === mt; })];
+    }).filter(function (x) { return x[1].n > 0; });
+
+    return out;
+  }
+
+  return {
+    num: num, parse: parse, scope: scope,
+    campaignRows: campaignRows, targetRows: targetRows,
+    aggregates: aggregates, heatBucket: heatBucket,
+    derived: derived, shares: shares, totalM: totalM, M6: M6
+  };
+})();
+if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
+
+</script>
+<script>
+(function(){
+'use strict';
+var S = {
+  raw:null, model:null, tab:'dash',
+  selPorts:[], selKeys:[],
+  cf:[], tf:[], csearch:'', tsearch:'',
+  csort:{k:'spend',dir:-1}, tsort:{k:'spend',dir:-1},
+  heat:false, open:{}
+};
+try{
+  var saved = JSON.parse(localStorage.getItem('ppcApp')||'{}');
+  ['tab','selPorts','selKeys','heat'].forEach(function(k){ if(saved[k]!==undefined) S[k]=saved[k]; });
+}catch(e){}
+function persist(){
+  try{ localStorage.setItem('ppcApp', JSON.stringify(
+    {tab:S.tab, selPorts:S.selPorts, selKeys:S.selKeys, heat:S.heat})); }catch(e){}
+}
+
+/* ---------------- formatting ---------------- */
+function fi(v){ return (v===null||v===undefined)?'':Math.round(v).toLocaleString('en-GB'); }
+function fc(v){ return (v===null||v===undefined)?'':'£'+v.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fp(v){ return (v===null||v===undefined)?'':(v*100).toFixed(1)+'%'; }
+function fx(v){ return (v===null||v===undefined)?'':v.toFixed(2)+'×'; }
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function stChip(s){
+  var k = (s||'').toLowerCase();
+  var cls = (k==='enabled'||k==='paused'||k==='archived')?k:'other';
+  return '<span class="st '+cls+'">'+esc(s||'—')+'</span>';
+}
+
+/* ---------------- data load ---------------- */
+function onData(json){
+  var payload = (typeof json==='string')?JSON.parse(json):json;
+  S.raw = payload.sheets||payload;
+  S.model = Engine.parse(S.raw);
+  // drop stale selections
+  S.selPorts = S.selPorts.filter(function(p){ return S.model.portfolios.indexOf(p)>=0; });
+  var keys = {}; S.model.campaigns.forEach(function(c){ keys[c.key]=true; });
+  S.selKeys = S.selKeys.filter(function(k){ return keys[k]; });
+  document.getElementById('load').style.display='none';
+  document.getElementById('view').style.display='';
+  document.getElementById('stamp').textContent =
+    'Data loaded ' + new Date().toLocaleTimeString() +
+    (payload.generatedAt ? '' : '');
+  renderControls(); render();
+}
+function load(){
+  document.getElementById('load').style.display='';
+  document.getElementById('view').style.display='none';
+  if (window.google && google.script && google.script.run){
+    google.script.run.withSuccessHandler(onData)
+      .withFailureHandler(function(e){
+        document.getElementById('load').innerHTML =
+          '<div style="color:#b91c1c;font-weight:600">Could not load data: '+esc(e && e.message)+'</div>';
+      }).getData();
+  } else if (window.__MOCK_DATA__){ onData(window.__MOCK_DATA__); }
+}
+document.getElementById('refresh').onclick = load;
+
+/* ---------------- scope ---------------- */
+function curScope(){ return Engine.scope(S.model, S.selPorts, S.selKeys); }
+
+/* ---------------- header controls ---------------- */
+function msel(boxId, paneId, cntId, items, selected, onChange, labelFn){
+  var box = document.getElementById(boxId), pane = document.getElementById(paneId);
+  var html = '<div class="tools"><button data-a="all">Select all</button><button data-a="none">Clear</button></div>' +
+    '<input class="srch" placeholder="Search…">';
+  items.forEach(function(it,i){
+    html += '<label data-i="'+i+'"><input type="checkbox" '+(selected.indexOf(it.id)>=0?'checked':'')+
+      ' data-id="'+esc(it.id)+'"><span>'+(labelFn?labelFn(it):esc(it.label))+'</span></label>';
+  });
+  pane.innerHTML = html;
+  document.getElementById(cntId).textContent = selected.length ? selected.length : 'All';
+  pane.querySelector('.srch').oninput = function(){
+    var q = this.value.toLowerCase();
+    pane.querySelectorAll('label').forEach(function(l){
+      l.style.display = l.textContent.toLowerCase().indexOf(q)>=0?'':'none';
+    });
+  };
+  pane.querySelectorAll('input[type=checkbox]').forEach(function(cb){
+    cb.onchange = function(){
+      var id = this.getAttribute('data-id');
+      var s = selected.slice();
+      if (this.checked){ if(s.indexOf(id)<0) s.push(id); }
+      else s = s.filter(function(x){return x!==id;});
+      onChange(s);
+    };
+  });
+  pane.querySelectorAll('.tools button').forEach(function(b){
+    b.onclick = function(){
+      onChange(this.getAttribute('data-a')==='all' ? items.map(function(i){return i.id;}) : []);
+    };
+  });
+  box.querySelector('button').onclick = function(e){
+    document.querySelectorAll('.msel').forEach(function(m){ if(m!==box) m.classList.remove('open'); });
+    box.classList.toggle('open'); e.stopPropagation();
+  };
+}
+document.addEventListener('click', function(e){
+  if (!e.target.closest('.msel')) document.querySelectorAll('.msel').forEach(function(m){m.classList.remove('open');});
+});
+function renderControls(){
+  msel('mselPort','portPane','portCnt',
+    S.model.portfolios.map(function(p){ return {id:p,label:p}; }),
+    S.selPorts,
+    function(s){ S.selPorts=s;
+      // drop manual campaigns that fell out of the portfolio scope
+      var ok = {}; Engine.scope(S.model,S.selPorts,null).campaigns.forEach(function(c){ok[c.key]=true;});
+      S.selKeys = S.selKeys.filter(function(k){return ok[k];});
+      persist(); renderControls(); render(); });
+  var inPort = Engine.scope(S.model, S.selPorts, null).campaigns;
+  msel('mselCamp','campPane','campCnt',
+    inPort.map(function(c){ return {id:c.key,label:c.name,c:c}; }),
+    S.selKeys,
+    function(s){ S.selKeys=s; persist(); renderControls(); render(); },
+    function(it){ return '<span class="chip '+it.c.fmt+'">'+it.c.fmt+'</span> '+esc(it.c.name); });
+}
+
+/* ---------------- nav ---------------- */
+document.getElementById('nav').addEventListener('click', function(e){
+  var b = e.target.closest('button'); if(!b) return;
+  S.tab = b.getAttribute('data-tab'); persist();
+  document.querySelectorAll('#nav button').forEach(function(x){ x.classList.toggle('on', x===b); });
+  render();
+});
+document.querySelectorAll('#nav button').forEach(function(b){
+  b.classList.toggle('on', b.getAttribute('data-tab')===S.tab);
+});
+
+/* ---------------- shared table pieces ---------------- */
+var MCOLS = [
+  ['impr','Impr',fi,'m'],['clicks','Clicks',fi,'m'],['ctr','CTR',fp,'d'],
+  ['spend','Spend',fc,'m'],['sales','Sales',fc,'m'],['orders','Orders',fi,'m'],
+  ['units','Units',fi,'m'],['cvr','CVR',fp,'d'],['acos','ACOS',fp,'d'],
+  ['cpc','CPC',fc,'d'],['roas','ROAS',fx,'d'],['aov','AOV',fc,'d']
+];
+var SHCOLS = [['is','IS'],['cs','CS'],['ss','SS'],['rs','RS'],['os','OS'],['us','US']];
+function valOf(row,k){
+  if (k==='budget'||k==='bid') return row[k];
+  if (row.m && k in row.m) return row.m[k];
+  if (row.d && k in row.d) return row.d[k];
+  if (row.sh && k in row.sh) return row.sh[k];
+  return null;
+}
+function applyFilters(rows, filters, search, textOf){
+  return rows.filter(function(r){
+    if (search){
+      if (textOf(r).toLowerCase().indexOf(search.toLowerCase())<0) return false;
+    }
+    for (var i=0;i<filters.length;i++){
+      var f=filters[i], v=valOf(r,f.k);
+      if (v===null||v===undefined) v=0;
+      if (f.op==='>' && !(v> f.v)) return false;
+      if (f.op==='<' && !(v< f.v)) return false;
+      if (f.op==='=' && !(Math.abs(v-f.v)<1e-9)) return false;
+      if (f.op==='≥' && !(v>=f.v)) return false;
+      if (f.op==='≤' && !(v<=f.v)) return false;
+      if (f.op==='≠' && !(Math.abs(v-f.v)>=1e-9)) return false;
+    }
+    return true;
+  });
+}
+function sortRows(rows, sort){
+  var k=sort.k, d=sort.dir;
+  return rows.slice().sort(function(a,b){
+    var x=valOf(a,k), y=valOf(b,k);
+    if (typeof x==='string'||typeof y==='string')
+      return d*String(x||'').localeCompare(String(y||''));
+    return d*(((x==null)?-Infinity:x) - ((y==null)?-Infinity:y));
+  });
+}
+function fbarHTML(id, cols, filters, searchVal, heatToggle){
+  var opts = cols.map(function(c){ return '<option value="'+c[0]+'">'+c[1]+'</option>'; }).join('');
+  var chips = filters.map(function(f,i){
+    return '<span class="fchip">'+f.label+' '+f.op+' '+f.v+' <b data-i="'+i+'">✕</b></span>';
+  }).join('');
+  return '<div class="fbar glass" id="'+id+'">' +
+    '<input class="txt" placeholder="🔍 Search…" value="'+esc(searchVal)+'">' +
+    '<select class="fcol">'+opts+'</select>' +
+    '<select class="fop"><option>&gt;</option><option>&lt;</option><option>=</option><option>≥</option><option>≤</option><option>≠</option></select>' +
+    '<input class="val" type="number" step="any" placeholder="value">' +
+    '<button class="hbtn fadd">+ Add filter</button>' + chips +
+    (heatToggle?'<span class="spacer"></span><label class="tgl"><input type="checkbox" class="heat" '+(S.heat?'checked':'')+'> Keyword rank heatmap</label>':'') +
+    '</div>';
+}
+function wireFbar(id, filters, cols, onChange, onSearch, onHeat){
+  var el = document.getElementById(id);
+  el.querySelector('.fadd').onclick = function(){
+    var k = el.querySelector('.fcol').value;
+    var op = el.querySelector('.fop').value;
+    var v = parseFloat(el.querySelector('.val').value);
+    if (isNaN(v)) return;
+    var lab=''; cols.forEach(function(c){ if(c[0]===k) lab=c[1]; });
+    filters.push({k:k,op:op,v:v,label:lab}); onChange();
+  };
+  el.querySelectorAll('.fchip b').forEach(function(b){
+    b.onclick=function(){ filters.splice(+this.getAttribute('data-i'),1); onChange(); };
+  });
+  var t=null;
+  el.querySelector('.txt').oninput=function(){
+    var v=this.value; clearTimeout(t); t=setTimeout(function(){ onSearch(v); },250);
+  };
+  var h=el.querySelector('.heat');
+  if (h) h.onchange=function(){ onHeat(this.checked); };
+}
+function thRow(cols, sort, extra){
+  var h='';
+  cols.forEach(function(c){
+    var arr = sort.k===c[0] ? ' <span class="arr">'+(sort.dir<0?'▼':'▲')+'</span>':'';
+    h+='<th data-k="'+c[0]+'" class="'+(c[3]==='l'?'l':'')+'">'+c[1]+arr+'</th>';
+  });
+  return h+(extra||'');
+}
+
+/* ================= DASHBOARD ================= */
+function miniTable(rows, totalRow){
+  var h='<table class="mini"><tr><th class="l" style="text-align:left">Segment</th><th>#</th><th>Impr</th><th>Clicks</th><th>Spend</th><th>Sales</th><th>Orders</th><th>Units</th><th>ACOS</th><th>ROAS</th></tr>';
+  rows.forEach(function(r){
+    var s=r[1];
+    h+='<tr><td class="l">'+esc(r[0])+'</td><td>'+fi(s.n)+'</td><td>'+fi(s.m.impr)+'</td><td>'+fi(s.m.clicks)+
+       '</td><td>'+fc(s.m.spend)+'</td><td>'+fc(s.m.sales)+'</td><td>'+fi(s.m.orders)+'</td><td>'+fi(s.m.units)+
+       '</td><td>'+fp(s.d.acos)+'</td><td>'+fx(s.d.roas)+'</td></tr>';
+  });
+  if (totalRow){
+    var t=totalRow;
+    h+='<tr class="tot"><td class="l">TOTAL</td><td>'+fi(t.n)+'</td><td>'+fi(t.m.impr)+'</td><td>'+fi(t.m.clicks)+
+       '</td><td>'+fc(t.m.spend)+'</td><td>'+fc(t.m.sales)+'</td><td>'+fi(t.m.orders)+'</td><td>'+fi(t.m.units)+
+       '</td><td>'+fp(t.d.acos)+'</td><td>'+fx(t.d.roas)+'</td></tr>';
+  }
+  return h+'</table>';
+}
+var DONUT_COLORS={'SP':'#2563eb','SB':'#7c3aed','SBV':'#db2777','SD':'#0d9488'};
+function donut(segs){
+  var tot=0; segs.forEach(function(s){tot+=s.v;});
+  if(!tot) return '<div class="dim">No spend in scope.</div>';
+  var r=44, cir=2*Math.PI*r, off=0;
+  var paths='';
+  segs.forEach(function(s){
+    if(!s.v) return;
+    var frac=s.v/tot;
+    paths+='<circle r="'+r+'" cx="60" cy="60" fill="none" stroke="'+s.c+'" stroke-width="20" '+
+      'stroke-dasharray="'+(frac*cir)+' '+(cir-frac*cir)+'" stroke-dashoffset="'+(-off*cir)+'" transform="rotate(-90 60 60)"/>';
+    off+=frac;
+  });
+  var leg='<div class="leg">';
+  segs.forEach(function(s){
+    if(!s.v) return;
+    leg+='<div><i style="background:'+s.c+'"></i>'+esc(s.l)+' — '+fc(s.v)+' ('+fp(s.v/tot)+')</div>';
+  });
+  return '<div class="donutbox"><svg width="120" height="120" viewBox="0 0 120 120">'+paths+
+    '<circle r="30" cx="60" cy="60" fill="rgba(255,255,255,.85)"/></svg>'+leg+'</div></div>';
+}
+function bars(rows){
+  var mx=0; rows.forEach(function(r){ mx=Math.max(mx,r[1].m.spend); });
+  var h='';
+  rows.forEach(function(r){
+    var w = mx? (r[1].m.spend/mx*100):0;
+    h+='<div class="bar"><div class="lb">'+esc(r[0])+'</div><div class="tr"><div class="fl" style="width:'+w+'%"></div></div>'+
+       '<div class="vl">'+fc(r[1].m.spend)+'</div></div>';
+  });
+  return h;
+}
+function renderDash(sc){
+  var ag = Engine.aggregates(sc);
+  var t = ag.total, d = t.d;
+  var kpis=[['Spend',fc(t.m.spend)],['Sales',fc(t.m.sales)],['ACOS',fp(d.acos)],['ROAS',fx(d.roas)],
+    ['Orders',fi(t.m.orders)],['Units',fi(t.m.units)],['Impressions',fi(t.m.impr)],['Clicks',fi(t.m.clicks)],
+    ['CTR',fp(d.ctr)],['CVR',fp(d.cvr)],['CPC',fc(d.cpc)],['AOV',fc(d.aov)],['CPA',fc(d.cpa)]];
+  var h='<div class="kpis">'+kpis.map(function(k){
+    return '<div class="kpi glass"><div class="l">'+k[0]+'</div><div class="v">'+(k[1]||'—')+'</div></div>';
+  }).join('')+'</div>';
+  h+='<div class="grid">';
+  h+='<div class="c8 card glass"><h3>Total — all ad types</h3>'+miniTable(ag.adTypes, t)+'</div>';
+  h+='<div class="c4 card glass"><h3>Spend by ad type</h3>'+donut(ag.adTypes.map(function(a){
+      var code=a[0].match(/\((\w+)\)/); code=code?code[1]:'SP';
+      return {l:a[0].replace(/ \(.*/,''), v:a[1].m.spend, c:DONUT_COLORS[code]||'#94a3b8'};
+    }))+'</div>';
+  h+='<div class="c6 card glass"><h3>Campaign state — all ad types</h3>'+miniTable(ag.stateAll,t)+'</div>';
+  h+='<div class="c6 card glass"><h3>Portfolios in scope</h3>'+miniTable(ag.portfolios)+'</div>';
+  h+='<div class="c12 card glass"><h3>SP — placements</h3>'+bars(ag.spPlacements)+miniTable(ag.spPlacements)+
+     '<div class="note">Amazon Business is a B2B subset already counted inside the other three placements.</div></div>';
+  h+='<div class="c6 card glass"><h3>SP — match / target types (target level)</h3>'+
+     miniTable(ag.spMatchTypes.filter(function(x){return x[1].n>0;}))+'</div>';
+  h+='<div class="c6 card glass"><h3>SP — bidding strategies</h3>'+miniTable(ag.spBidding)+
+     '<h3 style="margin-top:14px">SP — targeting type</h3>'+miniTable(ag.spTargeting)+'</div>';
+  h+='<div class="c6 card glass"><h3>SP — campaign structure</h3>'+
+     miniTable(ag.spStructure)+'<div class="note">SKC/MKC = single/multi keyword · SAC/MAC = single/multi ASIN.</div></div>';
+  h+='<div class="c6 card glass"><h3>SP — campaign state</h3>'+miniTable(ag.stateSP)+'</div>';
+  h+='<div class="c6 card glass"><h3>SB — ad format</h3>'+miniTable(ag.sbFormats)+
+     '<h3 style="margin-top:14px">SB — campaign state</h3>'+miniTable(ag.stateSB)+'</div>';
+  h+='<div class="c6 card glass"><h3>SB — placements (as reported by the bulk file)</h3>'+miniTable(ag.sbPlacements)+
+     '<div class="note">Amazon attributes SB campaign totals to the placement rows of the bulk file.</div></div>';
+  h+='<div class="c6 card glass"><h3>SD — campaign state</h3>'+miniTable(ag.stateSD)+'</div>';
+  h+='<div class="c6 card glass"><h3>SD — targeting</h3>'+miniTable(ag.sdTargeting)+'</div>';
+  h+='</div>';
+  return h;
+}
+
+/* ================= CAMPAIGNS ================= */
+var CCOLS=[['name','Campaign',null,'l'],['state','State',null,'l'],['budget','Budget',fc,'m']]
+  .concat(MCOLS).concat(SHCOLS.map(function(s){return [s[0],s[1],fp,'sh'];}));
+var CFCOLS=[['budget','Budget']].concat(MCOLS.map(function(c){return [c[0],c[1]];}))
+  .concat(SHCOLS);
+function renderCamps(sc){
+  var cr = Engine.campaignRows(sc);
+  var rows = applyFilters(cr.rows, S.cf, S.csearch, function(r){ return r.name+' '+r.port; });
+  rows = sortRows(rows, S.csort);
+  var h = fbarHTML('cfbar', CFCOLS, S.cf, S.csearch, false);
+  h+='<div class="tblwrap glass"><table><thead><tr><th></th><th class="l">Type</th>'+
+     thRow(CCOLS,S.csort)+'</tr></thead><tbody>';
+  var t=cr.total, td=cr.totalD;
+  h+='<tr class="tot"><td></td><td class="l">'+rows.length+' campaigns</td><td class="l">TOTAL — scope</td><td></td><td></td>'+
+     '<td>'+fi(t.impr)+'</td><td>'+fi(t.clicks)+'</td><td>'+fp(td.ctr)+'</td><td>'+fc(t.spend)+'</td><td>'+fc(t.sales)+
+     '</td><td>'+fi(t.orders)+'</td><td>'+fi(t.units)+'</td><td>'+fp(td.cvr)+'</td><td>'+fp(td.acos)+'</td><td>'+fc(td.cpc)+
+     '</td><td>'+fx(td.roas)+'</td><td>'+fc(td.aov)+'</td><td colspan="6"></td></tr>';
+  rows.forEach(function(r){
+    var open = S.open[r.key];
+    h+='<tr><td class="exp" data-k="'+esc(r.key)+'">'+(r.places.length?(open?'▾':'▸'):'')+'</td>'+
+       '<td class="l"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
+       '<td class="l"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
+       '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
+    MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
+    SHCOLS.forEach(function(s){ h+='<td>'+fp(r.sh[s[0]])+'</td>'; });
+    h+='</tr>';
+    if (open && r.places.length){
+      r.places.forEach(function(p){
+        h+='<tr class="sub"><td></td><td></td><td class="l pl">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
+        MCOLS.forEach(function(c){
+          var v = (c[3]==='m')?p.m[c[0]]:p.d[c[0]];
+          h+='<td>'+c[2](v)+'</td>';
+        });
+        SHCOLS.forEach(function(s){ h+='<td>'+fp(p.sh[s[0]])+'</td>'; });
+        h+='</tr>';
+      });
+      h+='<tr class="sub tot2"><td></td><td></td><td class="l pl">CAMPAIGN TOTAL</td><td></td><td></td>';
+      MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
+      h+='<td colspan="6"></td></tr>';
+    }
+  });
+  h+='</tbody></table></div>';
+  if (rows.some(function(r){return r.src==='SP';}))
+    h+='<div class="note">Placement shares are within the campaign. Amazon Business is a B2B subset of the other three SP placements, so a campaign\'s placements can sum past its total.</div>';
+  return h;
+}
+
+/* ================= TARGETS ================= */
+var TCOLS=[['target','Target',null,'l'],['match','Match',null,'l'],['bid','Bid',fc,'m']]
+  .concat(MCOLS).concat(SHCOLS.map(function(s){return [s[0],s[1],fp,'sh'];}));
+var TFCOLS=[['bid','Bid']].concat(MCOLS.map(function(c){return [c[0],c[1]];})).concat(SHCOLS);
+function renderTgts(sc){
+  var tr = Engine.targetRows(sc, S.model.kw);
+  var rows = applyFilters(tr.rows, S.tf, S.tsearch,
+    function(r){ return r.target+' '+r.camp+' '+r.match; });
+  rows = sortRows(rows, S.tsort);
+  var days = S.model.kw.days;
+  var h = fbarHTML('tfbar', TFCOLS, S.tf, S.tsearch, true);
+  var hmHead='';
+  if (S.heat){
+    hmHead='<th>SV</th><th>KW Sale</th>'+days.map(function(d){
+      var dt=new Date(d.date);
+      var lab=isNaN(dt)?esc(String(d.date).slice(0,6)):(dt.getDate()+' '+dt.toLocaleString('en',{month:'short'}));
+      return '<th class="hmh">'+lab+'</th>';
+    }).join('');
+  }
+  h+='<div class="tblwrap glass"><table><thead><tr><th class="l">Type</th>'+
+     thRow(TCOLS,S.tsort,hmHead)+'</tr></thead><tbody>';
+  var t=tr.total, td=tr.totalD;
+  h+='<tr class="tot"><td class="l">'+rows.length+' targets</td><td class="l">TOTAL — scope</td><td></td><td></td>'+
+     '<td>'+fi(t.impr)+'</td><td>'+fi(t.clicks)+'</td><td>'+fp(td.ctr)+'</td><td>'+fc(t.spend)+'</td><td>'+fc(t.sales)+
+     '</td><td>'+fi(t.orders)+'</td><td>'+fi(t.units)+'</td><td>'+fp(td.cvr)+'</td><td>'+fp(td.acos)+'</td><td>'+fc(td.cpc)+
+     '</td><td>'+fx(td.roas)+'</td><td>'+fc(td.aov)+'</td><td colspan="'+(6+(S.heat?2+days.length:0))+'"></td></tr>';
+  rows.forEach(function(r){
+    h+='<tr><td class="l"><span class="chip '+r.src+'">'+r.src+'</span></td>'+
+       '<td class="l" title="'+esc(r.stateLine)+'"><span class="campname">'+esc(r.target)+'</span>'+
+       '<span class="dim">'+esc(r.camp)+' · '+esc(r.stateLine)+'</span></td>'+
+       '<td class="l">'+esc(r.match)+'</td><td>'+fc(r.bid||null)+'</td>';
+    MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
+    SHCOLS.forEach(function(s){ h+='<td>'+fp(r.sh[s[0]])+'</td>'; });
+    if (S.heat){
+      if (r.hm && r.hm!=='NF'){
+        h+='<td class="hm">'+fi(Engine.num(r.hm.sv))+'</td><td class="hm">'+fi(Engine.num(r.hm.sales))+'</td>';
+        r.hm.ranks.forEach(function(v){
+          h+='<td class="hm '+Engine.heatBucket(v)+'">'+esc(v)+'</td>';
+        });
+      } else {
+        h+='<td class="hm nf">NF</td><td class="hm nf">NF</td>'+days.map(function(){
+          return '<td class="hm nf">NF</td>';}).join('');
+      }
+    }
+    h+='</tr>';
+  });
+  h+='</tbody></table></div>';
+  if (S.heat) h+='<div class="note">Rank buckets: 1-3, 4-10, 11-20, 21-48, 49-100, 101-305, &gt;306 · NF = keyword not tracked (ASIN/category targets are always NF). Newest day on the left.</div>';
+  return h;
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  var sc = curScope();
+  var v = document.getElementById('view');
+  if (S.tab==='dash') v.innerHTML = renderDash(sc);
+  else if (S.tab==='camps') v.innerHTML = renderCamps(sc);
+  else v.innerHTML = renderTgts(sc);
+
+  if (S.tab==='camps'){
+    wireFbar('cfbar', S.cf, CFCOLS, render, function(q){S.csearch=q;render();}, null);
+    v.querySelectorAll('.exp').forEach(function(td){
+      td.onclick=function(){ var k=this.getAttribute('data-k');
+        S.open[k]=!S.open[k]; render(); };
+    });
+    v.querySelectorAll('th[data-k]').forEach(function(th){
+      th.onclick=function(){ var k=this.getAttribute('data-k');
+        if (S.csort.k===k) S.csort.dir*=-1; else S.csort={k:k,dir:-1};
+        render(); };
+    });
+  } else if (S.tab==='tgts'){
+    wireFbar('tfbar', S.tf, TFCOLS, render, function(q){S.tsearch=q;render();},
+      function(on){ S.heat=on; persist(); render(); });
+    v.querySelectorAll('th[data-k]').forEach(function(th){
+      th.onclick=function(){ var k=this.getAttribute('data-k');
+        if (S.tsort.k===k) S.tsort.dir*=-1; else S.tsort={k:k,dir:-1};
+        render(); };
+    });
+  }
+}
+load();
+})();
+</script>
+</body>
+</html>
