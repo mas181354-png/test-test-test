@@ -39,7 +39,7 @@ nav button.on{background:#fff;color:#2563eb}
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 <div class="wrap">
   <header class="glass">
-    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v12</span></div>
+    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v13</span></div>
     <nav id="nav">
       <button data-tab="agg" class="on">Aggregates</button>
       <button data-tab="ports">Portfolios</button>
@@ -221,7 +221,7 @@ th.hmh{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;padding
 .bar .lb{width:120px;font-size:11px;font-weight:600;text-align:right;color:#334155}
 .bar .tr{flex:1;background:rgba(191,219,254,.4);height:14px;border-radius:7px;overflow:hidden}
 .bar .fl{height:100%;border-radius:7px;background:linear-gradient(90deg,var(--blue),var(--sky))}
-.bar .vl{width:90px;font-size:11px;font-weight:700}
+.bar .vl{width:150px;font-size:11px;font-weight:700}
 .donutbox{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
 .leg{font-size:11.5px}.leg div{display:flex;gap:7px;align-items:center;margin:3px 0}
 .leg i{width:10px;height:10px;border-radius:3px;display:inline-block}
@@ -1219,15 +1219,20 @@ function donut(segs){
     leg+='<div><i style="background:'+s.c+'"></i>'+esc(s.l)+' — '+fc(s.v)+' ('+fp(s.v/tot)+')</div>';
   });
   return '<div class="donutbox"><svg width="120" height="120" viewBox="0 0 120 120">'+paths+
-    '<circle r="30" cx="60" cy="60" fill="rgba(255,255,255,.85)"/></svg>'+leg+'</div></div>';
+    '<circle r="30" cx="60" cy="60" fill="rgba(255,255,255,.9)"/>'+
+    '<text x="60" y="57" text-anchor="middle" style="font:700 8px Inter;fill:#64748b">SPEND</text>'+
+    '<text x="60" y="69" text-anchor="middle" style="font:800 10px Inter;fill:#0f2c5f">'+esc(fc(tot))+'</text>'+
+    '</svg>'+leg+'</div></div>';
 }
-function bars(rows){
-  var mx=0; rows.forEach(function(r){ mx=Math.max(mx,r[1].m.spend); });
+function bars(rows, excl){
+  var kept = rows.filter(function(r){ return !(excl && excl.indexOf(r[0])>=0); });
+  var mx=0, tot=0;
+  kept.forEach(function(r){ mx=Math.max(mx,r[1].m.spend); tot+=r[1].m.spend; });
   var h='';
-  rows.forEach(function(r){
+  kept.forEach(function(r){
     var w = mx? (r[1].m.spend/mx*100):0;
     h+='<div class="bar"><div class="lb">'+esc(r[0])+'</div><div class="tr"><div class="fl" style="width:'+w+'%"></div></div>'+
-       '<div class="vl">'+fc(r[1].m.spend)+'</div></div>';
+       '<div class="vl">'+fc(r[1].m.spend)+(tot?' · '+fp(r[1].m.spend/tot):'')+'</div></div>';
   });
   return h;
 }
@@ -1241,6 +1246,16 @@ function kpiRow(t){
   }).join('')+'</div>';
 }
 
+function goalDays(){
+  var g = S.goals||{};
+  var sd = g.start? new Date(g.start):null, ed = g.end? new Date(g.end):null;
+  return (sd&&ed&&!isNaN(sd)&&!isNaN(ed)) ? Math.round((ed-sd)/86400000)+1 : null;
+}
+function budCells(r){
+  var used = r.bused;
+  return '<td'+shBg(r.bsh)+'>'+fp(r.bsh)+'</td>'+
+         '<td class="'+(used!=null&&used>1?'neg':'')+'">'+fp(used)+'</td>';
+}
 /* ================= AGGREGATES ================= */
 function renderAgg(sc){
   var ag = Engine.aggregates(sc);
@@ -1348,9 +1363,10 @@ function organicCard(sc){
   function split(label, tot, spons, fmt){
     if (tot===null) return '';
     var org = tot - spons, sShare = tot? spons/tot : 0, oShare = tot? Math.max(0,org)/tot : 0;
+    var wS = Math.max(8, Math.min(92, sShare*100)), wO = 100-wS;
     var hh='<div style="margin-top:10px;font:700 11px Inter;color:#334155">'+label+'</div>'+
-      '<div class="obar"><div style="flex:'+Math.max(0.06,sShare)+';background:linear-gradient(90deg,#2563eb,#0ea5e9)">Sponsored '+fmt(spons)+' ('+fp(sShare)+')</div>'+
-      '<div style="flex:'+Math.max(0.06,oShare)+';background:linear-gradient(90deg,#10b981,#34d399)">Organic '+fmt(org)+' ('+fp(tot?org/tot:null)+')</div></div>';
+      '<div class="obar"><div style="width:'+wS+'%;background:linear-gradient(90deg,#2563eb,#0ea5e9)">Sponsored '+fmt(spons)+' ('+fp(sShare)+')</div>'+
+      '<div style="width:'+wO+'%;background:linear-gradient(90deg,#10b981,#34d399)">Organic '+fmt(org)+' ('+fp(tot?org/tot:null)+')</div></div>';
     return hh;
   }
   h+=split('SALES', C.totS, C.t.sales, fc);
@@ -1424,7 +1440,7 @@ function renderSPA(sc){
   var spSeg = ag.adTypes[0][1];
   var h = kpiRow(spSeg);
   h+='<div class="grid">';
-  h+='<div class="c12 card glass"><h3>SP — placements</h3>'+bars(ag.spPlacements)+
+  h+='<div class="c12 card glass"><h3>SP — placements</h3>'+bars(ag.spPlacements,['Amazon Business'])+
      fullTable(ag.spPlacements,{excl:['Amazon Business']})+
      '<div class="note">Amazon Business is a B2B subset already counted inside the other three placements, so it is not added into TOTAL.</div></div>';
   h+='<div class="c12 card glass"><h3>SP — match / target types (target-level attribution)</h3>'+
@@ -1470,12 +1486,24 @@ function renderSDA(sc){
 }
 
 /* ================= CAMPAIGNS ================= */
-var CCOLS=[['name','Campaign',null,'l'],['state','State',null,'l'],['budget','Budget',fc,'m']]
+var CCOLS=[['name','Campaign',null,'l'],['state','State',null,'l'],['budget','Budget',fc,'m'],
+  ['bsh','Bgt Share',fp,'sh'],['bused','Bgt Used',fp,'m']]
   .concat(MCOLS).concat(SHCOLS.map(function(s){return [s[0],s[1],fp,'sh'];}));
-var CFCOLS=[['budget','Budget']].concat(MCOLS.map(function(c){return [c[0],c[1]];}))
+var CFCOLS=[['budget','Budget'],['bsh','Bgt Share'],['bused','Bgt Used']].concat(MCOLS.map(function(c){return [c[0],c[1]];}))
   .concat(SHCOLS);
 function renderCamps(sc){
   var cr = Engine.campaignRows(sc);
+  var gdays = goalDays();
+  var scopeBudget = 0, portBudget = {};
+  cr.rows.forEach(function(r){
+    scopeBudget += (r.budget||0);
+    portBudget[r.port] = (portBudget[r.port]||0) + (r.budget||0);
+  });
+  cr.rows.forEach(function(r){
+    var denom = (S.cview==='port') ? portBudget[r.port] : scopeBudget;
+    r.bsh = denom ? (r.budget||0)/denom : null;
+    r.bused = (gdays && r.budget) ? r.m.spend/(r.budget*gdays) : null;
+  });
   var rows = applyFilters(cr.rows, S.cf, S.csearch, function(r){ return r.name+' '+r.port; });
   rows = sortRows(rows, S.csort);
   var CCAP = 1000, cTotal = rows.length, cCapped = cTotal > CCAP;
@@ -1493,7 +1521,7 @@ function renderCamps(sc){
   function campRow(r, shOwn){
     var hh='<tr><td class="l fz" style="left:0"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
        '<td class="l fz namecol" style="left:62px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
-       '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
+       '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>'+budCells(r);
     MCOLS.forEach(function(c){ hh+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
     SHCOLS.forEach(function(sx){ hh+='<td'+shBg(shOwn[sx[0]])+'>'+fp(shOwn[sx[0]])+'</td>'; });
     return hh+'</tr>';
@@ -1518,9 +1546,13 @@ function renderCamps(sc){
     order.sort(function(a,b){ return gm[b].spend-gm[a].spend; });
     order.forEach(function(port){
       var m=gm[port], d=Engine.derived(m);
+      var pbt = portBudget[port]||0;
+      var gBused = (gdays && pbt)? gm[port].spend/(pbt*gdays) : null;
       h+='<div class="pcard glass"><div class="phead">'+
          '<span class="pname" title="'+esc(port)+'">📁 '+esc(port)+'</span>'+
          '<span class="pstat">'+groups[port].length+' campaigns</span>'+
+         '<span class="pstat">Budget/day <b>'+fc(pbt)+'</b></span>'+
+         (gBused!=null? '<span class="pstat">Bgt Used <b class="'+(gBused>1?'neg':'pos')+'">'+fp(gBused)+'</b></span>':'')+
          '<span class="pstat">Spend <b>'+fc(m.spend)+'</b></span>'+
          '<span class="pstat">Sales <b>'+fc(m.sales)+'</b></span>'+
          '<span class="pstat">Orders <b>'+fi(m.orders)+'</b></span>'+
@@ -1538,7 +1570,7 @@ function renderCamps(sc){
   h+='<div class="note">'+(S.cview==='port'
       ? 'Each portfolio has its own card; campaign shares are within that portfolio (every card sums to 100%).'
       : 'Campaign shares are of the whole selected scope.')+
-     ' Per-campaign placements live on the Placements tab. Click any column header to sort or filter.</div>';
+     ' Per-campaign placements live on the Placements tab. Bgt Share = daily budget as a share of the '+(S.cview==='port'?'portfolio':'scope')+' budget (📁 rows: of the scope). Bgt Used = Spend ÷ (Daily budget × goal-period days'+(goalDays()?'':' — set Start/End dates on the Portfolios tab to activate')+'); over 100% shows red. Click any column header to sort or filter.</div>';
   return h;
 }
 
@@ -1554,6 +1586,13 @@ function renderPlc(sc){
     S._plcAuto = true;
     if (rows.length > 50) rows.forEach(function(r){ S.pclosed[r.key] = true; });
   }
+  var gdaysP = goalDays();
+  var scopeBudP = 0;
+  cr.rows.forEach(function(r){ scopeBudP += (r.budget||0); });
+  cr.rows.forEach(function(r){
+    r.bsh = scopeBudP ? (r.budget||0)/scopeBudP : null;
+    r.bused = (gdaysP && r.budget) ? r.m.spend/(r.budget*gdaysP) : null;
+  });
   var PCAP = 800, pTotal = rows.length, pCapped = pTotal > PCAP;
   if (pCapped) rows = rows.slice(0, PCAP);
   var FZ = {name:'fz namecol', name_st:'left:88px'};
@@ -1576,14 +1615,14 @@ function renderPlc(sc){
     h+='<tr><td class="exp fz" style="left:0" data-k="'+esc(r.key)+'">'+(open?'▾':'▸')+'</td>'+
        '<td class="l fz" style="left:26px"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
        '<td class="l fz namecol" style="left:88px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
-       '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
+       '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>'+budCells(r);
     MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
     SHCOLS.forEach(function(sx){ h+='<td'+shBg(r.sh[sx[0]])+'>'+fp(r.sh[sx[0]])+'</td>'; });
     h+='</tr>';
     if (open){
       r.places.forEach(function(p){
         h+='<tr class="sub"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
-           '<td class="l pl fz namecol" style="left:88px">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
+           '<td class="l pl fz namecol" style="left:88px">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td><td></td><td></td>';
         MCOLS.forEach(function(c){
           var v = (c[3]==='m')?p.m[c[0]]:p.d[c[0]];
           h+='<td>'+c[2](v)+'</td>';
@@ -1592,7 +1631,7 @@ function renderPlc(sc){
         h+='</tr>';
       });
       h+='<tr class="sub tot2"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
-         '<td class="l pl fz namecol" style="left:88px">CAMPAIGN TOTAL</td><td></td><td></td>';
+         '<td class="l pl fz namecol" style="left:88px">CAMPAIGN TOTAL</td><td></td><td></td><td></td><td></td>';
       MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
       h+='<td colspan="6"></td></tr>';
     }
