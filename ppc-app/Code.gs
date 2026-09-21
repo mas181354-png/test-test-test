@@ -61,6 +61,24 @@ function doGet() {
 /** Cheap reachability probe for the client's watchdog. */
 function ping() { return 'pong'; }
 
+/** Imported spreadsheets can lack a timezone (getSpreadsheetTimeZone()
+ *  returns null) — fall back to the script timezone, then GMT. */
+function tzOf_(ss) {
+  var tz = null;
+  try { tz = ss.getSpreadsheetTimeZone(); } catch (e) {}
+  if (!tz || typeof tz !== 'string') {
+    try { tz = Session.getScriptTimeZone(); } catch (e2) {}
+  }
+  return (tz && typeof tz === 'string') ? tz : 'Etc/GMT';
+}
+
+/** yyyy-MM-dd that never throws, whatever the timezone value is. */
+function ymd_(d, tz) {
+  try { return Utilities.formatDate(d, tz, 'yyyy-MM-dd'); } catch (e) {}
+  var m = '0' + (d.getMonth() + 1), dd = '0' + d.getDate();
+  return d.getFullYear() + '-' + m.slice(-2) + '-' + dd.slice(-2);
+}
+
 /** Full payload for the client. Shape per tab: array of {r, v} rows where
  *  row 2 is the header row (shipped so the client resolves columns by name).
  *  Never throws: errors come back as {error} so the client can display them. */
@@ -124,14 +142,14 @@ function getData_() {
   var kw = ss.getSheetByName(SHEETS.kw);
   var kwRows = [];
   if (kw) {
-    var tz = ss.getSpreadsheetTimeZone();
+    var tz = tzOf_(ss);
     var kv = kw.getDataRange().getValues();
     for (var r = 0; r < kv.length; r++) {
       var row = kv[r].slice(0, 37);
       var any = false;
       for (var c = 0; c < row.length; c++) {
         // calendar string in the sheet's timezone -> no day shift for viewers
-        if (row[c] instanceof Date) row[c] = Utilities.formatDate(row[c], tz, 'yyyy-MM-dd');
+        if (row[c] instanceof Date) row[c] = ymd_(row[c], tz);
         if (row[c] !== '' && row[c] !== null && String(row[c]).trim() !== '') any = true;
       }
       if (r + 1 <= 4 || any) kwRows.push({ r: r + 1, v: row });
@@ -152,13 +170,13 @@ var GOAL_KEYS = [['start', 'Start Date'], ['end', 'End Date'],
 function readGoals_(ss) {
   var sh = ss.getSheetByName(GOALS_SHEET);
   if (!sh) return null;
-  var tz = ss.getSpreadsheetTimeZone();
+  var tz = tzOf_(ss);
   var v = sh.getRange(2, 1, GOAL_KEYS.length, 2).getValues();
   var out = {};
   GOAL_KEYS.forEach(function (k, i) {
     var x = v[i] ? v[i][1] : '';
     // format in the SPREADSHEET timezone so save -> load never shifts a day
-    if (x instanceof Date) x = Utilities.formatDate(x, tz, 'yyyy-MM-dd');
+    if (x instanceof Date) x = ymd_(x, tz);
     out[k[0]] = (x === '' ? null : x);
   });
   return out;
