@@ -39,7 +39,7 @@ nav button.on{background:#fff;color:#2563eb}
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 <div class="wrap">
   <header class="glass">
-    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v8</span></div>
+    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v9</span></div>
     <nav id="nav">
       <button data-tab="agg" class="on">Aggregates</button>
       <button data-tab="ports">Portfolios</button>
@@ -597,7 +597,12 @@ var Engine = (function () {
           return { raw: p[0], label: p[1], pct: got.pct, m: got.m, d: derived(got.m) };
         });
         var pTot = zeroM();
-        places.forEach(function (p) { addM(pTot, p.m); });
+        places.forEach(function (p) {
+          // Amazon Business is a B2B subset of the other SP placements —
+          // keep it OUT of the share denominator
+          if (c.src === 'SP' && p.raw === 'Placement Amazon Business') return;
+          addM(pTot, p.m);
+        });
         places.forEach(function (p) { p.sh = shares(p.m, pTot); });
         return {
           key: c.key, src: c.src, fmt: c.fmt, name: c.name, port: c.port,
@@ -641,9 +646,23 @@ var Engine = (function () {
     });
     var rows = arr.map(function (x) {
       var t = x.t;
-      var hm = null;
+      var hm = null, sv = null, ksales = null, avg7 = null;
       if (kwModel && t.target) {
         var rec = kwModel.map[String(t.target).trim().toLowerCase().replace(/\s+/g, ' ')];
+        if (rec) {
+          sv = num(rec.sv); ksales = num(rec.sales);
+          var vals = [];
+          for (var i = 0; i < Math.min(7, kwModel.days.length); i++) {
+            var rv = rec.ranks[kwModel.days[i].col - 3];
+            if (rv === null || rv === undefined || rv === '') continue;
+            var s = String(rv);
+            vals.push(s.indexOf('>') === 0 ? 306 : num(rv));
+          }
+          if (vals.length) {
+            var sum = 0; vals.forEach(function (v) { sum += v; });
+            avg7 = sum / vals.length;
+          }
+        }
         hm = rec ? { sv: rec.sv, sales: rec.sales, ranks: kwModel.days.map(function (d) {
           var v = rec.ranks[d.col - 3];
           return (v === null || v === undefined) ? '' : v;
@@ -656,6 +675,7 @@ var Engine = (function () {
                    ' | Ad group: ' + (t.states.g || '?') +
                    ' | Target: ' + (t.states.t || '?'),
         states: t.states,
+        sv: sv, ksales: ksales, avg7: avg7,
         m: t.m, d: derived(t.m), sh: shares(t.m, tot), hm: hm
       };
     });
@@ -1164,7 +1184,7 @@ function fullTable(rows, opts){
     var sh = Engine.shares(r[1].m, tot.m);
     h+='<tr><td class="l">'+esc(r[0])+'</td>'+fullCells(r[1].n, r[1].m, r[1].d, sh)+'</tr>';
   });
-  h+='<tr class="tot"><td class="l">TOTAL</td>'+fullCells(tot.n, tot.m, tot.d, Engine.shares(tot.m, tot.m))+'</tr>';
+  h+='<tr class="tot"><td class="l">TOTAL</td>'+fullCells(tot.n, tot.m, tot.d, null)+'</tr>';
   return h+'</table></div>';
 }
 var DONUT_COLORS={'SP':'#2563eb','SB':'#7c3aed','SBV':'#db2777','SD':'#0d9488'};
@@ -1368,7 +1388,7 @@ function renderPorts(sc){
   FULLH.forEach(function(x){ h+='<th>'+x+'</th>'; });
   h+='</tr></thead><tbody>';
   h+='<tr class="tot"><td class="l fz" style="left:0">TOTAL — scope</td><td class="l"></td>'+
-     fullCells(null, pr.total, pr.totalD, Engine.shares(pr.total, pr.total))+'</tr>';
+     fullCells(null, pr.total, pr.totalD, null)+'</tr>';
   pr.rows.forEach(function(p){
     var chips = Object.keys(p.srcs).map(function(f){
       return '<span class="chip '+f+'">'+p.srcs[f]+' '+f+'</span>';
@@ -1553,14 +1573,15 @@ function renderPlc(sc){
     }
   });
   h+='</tbody></table></div>';
-  h+='<div class="note">Fixed placement order — SP: Top of Search / Rest of Search / Product Pages / Amazon Business (a B2B subset already inside the other three) · SB: Top of Search / Detail Page / Home / Other. Placement shares are within their campaign; campaign shares are of the scope. SD campaigns have no placement rows in the bulk file.</div>';
+  h+='<div class="note">Fixed placement order — SP: Top of Search / Rest of Search / Product Pages / Amazon Business · SB: Top of Search / Detail Page / Home / Other. Placement shares are within their campaign and EXCLUDE Amazon Business from the denominator (it is a B2B subset already counted inside the other three; its own row shows its size relative to them); campaign shares are of the scope. SD campaigns have no placement rows in the bulk file.</div>';
   return h;
 }
 
 /* ================= TARGETS ================= */
-var TCOLS=[['target','Target',null,'l'],['match','Match',null,'l'],['bid','Bid',fc,'m']]
+var TCOLS=[['target','Target',null,'l'],['match','Match',null,'l'],['bid','Bid',fc,'m'],
+  ['sv','SV',fi,'m'],['ksales','KW Sales',fi,'m'],['avg7','7d Rank',null,'m']]
   .concat(MCOLS).concat(SHCOLS.map(function(s){return [s[0],s[1],fp,'sh'];}));
-var TFCOLS=[['bid','Bid']].concat(MCOLS.map(function(c){return [c[0],c[1]];})).concat(SHCOLS);
+var TFCOLS=[['bid','Bid'],['sv','SV'],['ksales','KW Sales'],['avg7','7d Rank']].concat(MCOLS.map(function(c){return [c[0],c[1]];})).concat(SHCOLS);
 function renderTgts(sc){
   var tr = Engine.targetRows(sc, S.model.kw);
   var KWM = {Exact:1, Phrase:1, Broad:1};
@@ -1593,7 +1614,7 @@ function renderTgts(sc){
   }
   var hmHead='';
   if (S.heat){
-    hmHead='<th>SV</th><th>KW Sale</th>'+days.map(function(d){
+    hmHead=days.map(function(d){
       var m=String(d.date).match(/^(\d{4})-(\d{2})-(\d{2})/);
       var dt=m? new Date(+m[1], +m[2]-1, +m[3]) : new Date(d.date);
       var lab=isNaN(dt)?esc(String(d.date).slice(0,6)):(dt.getDate()+' '+dt.toLocaleString('en',{month:'short'}));
@@ -1604,27 +1625,27 @@ function renderTgts(sc){
      thRow(TCOLS,S.tsort,hmHead,FZ)+'</tr></thead><tbody>';
   var t=tr.total, td=tr.totalD;
   h+='<tr class="tot"><td class="l fz" style="left:0">'+rows.length+' targets</td>'+
-     '<td class="l fz namecol" style="left:62px">TOTAL — scope</td><td></td><td></td>'+
+     '<td class="l fz namecol" style="left:62px">TOTAL — scope</td><td></td><td></td><td></td><td></td><td></td>'+
      '<td>'+fi(t.impr)+'</td><td>'+fi(t.clicks)+'</td><td>'+fp(td.ctr)+'</td><td>'+fc(t.spend)+'</td><td>'+fc(t.sales)+
      '</td><td>'+fi(t.orders)+'</td><td>'+fi(t.units)+'</td><td>'+fp(td.cvr)+'</td><td>'+fp(td.acos)+'</td><td>'+fc(td.cpc)+
-     '</td><td>'+fx(td.roas)+'</td><td>'+fc(td.aov)+'</td><td colspan="'+(6+(S.heat?2+days.length:0))+'"></td></tr>';
+     '</td><td>'+fx(td.roas)+'</td><td>'+fc(td.aov)+'</td><td colspan="'+(6+(S.heat?days.length:0))+'"></td></tr>';
   rows.forEach(function(r){
     h+='<tr><td class="l fz" style="left:0"><span class="chip '+r.src+'">'+r.src+'</span></td>'+
        '<td class="l fz namecol" style="left:62px" title="'+esc(r.stateLine)+'"><span class="campname">'+esc(r.target)+'</span>'+
        '<span class="dim campname">'+esc(r.camp)+'</span></td>'+
        '<td class="l"><span class="mchip'+((r.match==='Exact'||r.match==='Phrase'||r.match==='Broad')?'':' pt')+'">'+esc(r.match)+'</span>'+
-       ((r.states.t||'').toLowerCase()==='enabled'?'':' '+stChip(r.states.t))+'</td><td>'+fc(r.bid||null)+'</td>';
+       ((r.states.t||'').toLowerCase()==='enabled'?'':' '+stChip(r.states.t))+'</td><td>'+fc(r.bid||null)+'</td>'+
+       '<td>'+(r.sv==null?'':fi(r.sv))+'</td><td>'+(r.ksales==null?'':fi(r.ksales))+'</td>'+
+       '<td class="hm '+(r.avg7==null?'':Engine.heatBucket(Math.round(r.avg7)))+'">'+(r.avg7==null?'':(Math.round(r.avg7*10)/10).toFixed(1))+'</td>';
     MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
     SHCOLS.forEach(function(sx){ h+='<td'+shBg(r.sh[sx[0]])+'>'+fp(r.sh[sx[0]])+'</td>'; });
     if (S.heat){
       if (r.hm && r.hm!=='NF'){
-        h+='<td class="hm">'+fi(Engine.num(r.hm.sv))+'</td><td class="hm">'+fi(Engine.num(r.hm.sales))+'</td>';
         r.hm.ranks.forEach(function(v){
           h+='<td class="hm '+Engine.heatBucket(v)+'">'+esc(v)+'</td>';
         });
       } else {
-        h+='<td class="hm nf">NF</td><td class="hm nf">NF</td>'+days.map(function(){
-          return '<td class="hm nf">NF</td>';}).join('');
+        h+=days.map(function(){ return '<td class="hm nf">NF</td>'; }).join('');
       }
     }
     h+='</tr>';
