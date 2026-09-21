@@ -58,9 +58,23 @@ function doGet() {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
+/** Cheap reachability probe for the client's watchdog. */
+function ping() { return 'pong'; }
+
 /** Full payload for the client. Shape per tab: array of {r, v} rows where
- *  row 2 is the header row (shipped so the client resolves columns by name). */
+ *  row 2 is the header row (shipped so the client resolves columns by name).
+ *  Never throws: errors come back as {error} so the client can display them. */
 function getData() {
+  try {
+    return getData_();
+  } catch (e) {
+    return JSON.stringify({ error: String(e && e.message || e),
+                            stack: String(e && e.stack || '') });
+  }
+}
+
+function getData_() {
+  var t0 = Date.now();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var out = { generatedAt: new Date().toISOString(), sheets: {}, warnings: [] };
 
@@ -95,12 +109,13 @@ function getData() {
     KEEP_ENTITIES[name].forEach(function (e) { keepE[e] = true; });
 
     var rows = [];
-    // ship the header under CANONICAL names so the client always resolves them
+    // ship the header under CANONICAL names so the client always resolves them;
+    // data rows are renumbered from 3 so a shifted paste loses nothing
     rows.push({ r: 2, v: canon.slice() });
     for (var i = hi + 1; i < values.length; i++) {
       var ent = entC >= 0 ? String(values[i][entC] || '').trim() : '';
       if (!ent || !keepE[ent]) continue;
-      rows.push({ r: i + 1, v: project(values[i], keepC) });
+      rows.push({ r: i - hi + 2, v: project(values[i], keepC) });
     }
     out.sheets[name] = rows;
   });
@@ -124,6 +139,7 @@ function getData() {
   }
   out.sheets[SHEETS.kw] = kwRows;
   out.goals = readGoals_(ss);
+  out.tookMs = Date.now() - t0;
   return JSON.stringify(out);
 }
 

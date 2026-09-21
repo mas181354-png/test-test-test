@@ -39,7 +39,7 @@ nav button.on{background:#fff;color:#2563eb}
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 <div class="wrap">
   <header class="glass">
-    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v6</span></div>
+    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v7</span></div>
     <nav id="nav">
       <button data-tab="agg" class="on">Aggregates</button>
       <button data-tab="ports">Portfolios</button>
@@ -821,8 +821,20 @@ function stChip(s){
 /* ---------------- data load ---------------- */
 var GOAL_DEFAULTS = {start:'', end:'', spend:null, orders:null, units:null,
                      acos:null, totUnits:null, totSales:null};
+function loadFail(msg, detail){
+  clearTimeout(S._wd1); clearTimeout(S._wd2);
+  document.getElementById('load').innerHTML =
+    '<div class="pasteerr">⚠ <b>Could not load the data.</b><br>'+esc(msg)+
+    (detail?'<br><span style="font-weight:400;font-size:12px">'+esc(detail)+'</span>':'')+
+    '<br><br><button class="hbtn" onclick="location.reload()">⟳ Try again</button></div>';
+}
 function onData(json){
+ try {
+  clearTimeout(S._wd1); clearTimeout(S._wd2);
   var payload = (typeof json==='string')?JSON.parse(json):json;
+  if (payload && payload.error){
+    loadFail('The spreadsheet code reported an error:', payload.error); return;
+  }
   S.raw = payload.sheets||payload;
   var g = payload.goals;
   if (!g){ try{ g = JSON.parse(localStorage.getItem('ppcGoals')||'null'); }catch(e){} }
@@ -837,18 +849,44 @@ function onData(json){
   document.getElementById('view').style.display='';
   document.getElementById('stamp').textContent =
     'Data loaded ' + new Date().toLocaleTimeString() +
-    (payload.generatedAt ? '' : '');
+    (payload.tookMs ? ' · server ' + payload.tookMs + 'ms' : '');
   applyNameW();
   renderControls(); render();
+ } catch(e){
+  loadFail('The app hit an error while reading the data — send this to have it fixed:',
+           (e && e.message) + ' | ' + String(e && e.stack).slice(0, 300));
+ }
 }
 function load(){
   document.getElementById('load').style.display='';
   document.getElementById('view').style.display='none';
+  var WD1 = window.__WD_FAST ? 1500 : 20000, WD2 = window.__WD_FAST ? 3000 : 45000;
+  clearTimeout(S._wd1); clearTimeout(S._wd2);
+  S._wd1 = setTimeout(function(){
+    var l = document.getElementById('load');
+    if (!l || l.style.display==='none') return;
+    var d = l.querySelector('div:last-child');
+    if (d) d.textContent = 'Still waiting for Google Apps Script… (this normally takes 2–5 seconds)';
+    if (window.google && google.script && google.script.run){
+      google.script.run.withSuccessHandler(function(){
+        var d2 = document.querySelector('#load div:last-child');
+        if (d2) d2.textContent = 'Google is reachable — the data call is still running…';
+      }).ping();
+    }
+  }, WD1);
+  S._wd2 = setTimeout(function(){
+    var l = document.getElementById('load');
+    if (!l || l.style.display==='none') return;
+    l.innerHTML = '<div class="pasteerr">⚠ <b>Loading is stuck.</b> The page is fine, but Google never answered the data request. The usual causes:<br><br>'+
+      '1. <b>Wrong Google account</b> — the browser opened this link under a different signed-in account. Open the link in an incognito window signed into ONLY the account that owns the sheet.<br>'+
+      '2. <b>Authorization pending</b> — in Apps Script run any function once (e.g. ping) and approve the permission prompt, then Deploy → Manage deployments → ✏ → New version.<br>'+
+      '3. <b>Third-party cookies blocked</b> — allow cookies for [*.]google.com, or try another browser/profile.<br><br>'+
+      '<button class="hbtn" onclick="location.reload()">⟳ Try again</button></div>';
+  }, WD2);
   if (window.google && google.script && google.script.run){
     google.script.run.withSuccessHandler(onData)
       .withFailureHandler(function(e){
-        document.getElementById('load').innerHTML =
-          '<div style="color:#b91c1c;font-weight:600">Could not load data: '+esc(e && e.message)+'</div>';
+        loadFail('Google returned an error from getData():', e && e.message);
       }).getData();
   } else if (window.__MOCK_DATA__){ onData(window.__MOCK_DATA__); }
 }
