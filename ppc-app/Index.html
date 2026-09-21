@@ -39,7 +39,7 @@ nav button.on{background:#fff;color:#2563eb}
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 <div class="wrap">
   <header class="glass">
-    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v5</span></div>
+    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE <span class="stamp">v6</span></div>
     <nav id="nav">
       <button data-tab="agg" class="on">Aggregates</button>
       <button data-tab="ports">Portfolios</button>
@@ -96,9 +96,9 @@ body{
   background-attachment:fixed;min-height:100vh;font-size:13px;
 }
 .blob{position:fixed;border-radius:50%;filter:blur(90px);opacity:.5;z-index:0;pointer-events:none}
-.b1{width:480px;height:480px;background:#93c5fd;top:-140px;left:-120px}
-.b2{width:420px;height:420px;background:#bae6fd;bottom:-160px;right:-100px}
-.b3{width:300px;height:300px;background:#e0e7ff;top:40%;left:55%}
+.blob.b1{width:480px;height:480px;background:#93c5fd;top:-140px;left:-120px}
+.blob.b2{width:420px;height:420px;background:#bae6fd;bottom:-160px;right:-100px}
+.blob.b3{width:300px;height:300px;background:#e0e7ff;top:40%;left:55%}
 .wrap{position:relative;z-index:1;max-width:1560px;margin:0 auto;padding:14px 18px 60px}
 
 /* ---------- glass primitives ---------- */
@@ -166,6 +166,8 @@ td{padding:6px 9px;border-bottom:1px solid rgba(191,219,254,.45);text-align:righ
   font-variant-numeric:tabular-nums}
 td.l{text-align:left}
 tbody tr:hover td{background:rgba(219,234,254,.35)}
+tbody tr:hover td.fz{background:#dbeafe}
+tr.sub:hover td.fz{background:#d6e9fc}
 tr.tot td{background:rgba(219,234,254,.6);font-weight:700;border-top:2px solid rgba(37,99,235,.35)}
 tr.sub td{background:rgba(240,249,255,.72);color:#1e3a5f;font-size:11.5px}
 tr.sub.tot2 td{background:rgba(219,234,254,.85);font-weight:700}
@@ -1173,12 +1175,12 @@ function renderAgg(sc){
   var ag = Engine.aggregates(sc);
   var h = kpiRow(ag.total);
   h+='<div class="grid">';
-  h+='<div class="c8 card glass"><h3>Total — all ad types</h3>'+
-     fullTable(ag.adTypes,{totalSeg:ag.total})+'</div>';
-  h+='<div class="c4 card glass"><h3>Spend by ad type</h3>'+donut(ag.adTypes.map(function(a){
+  h+='<div class="c12 card glass"><h3>Spend by ad type</h3>'+donut(ag.adTypes.map(function(a){
       var code=a[0].match(/\((\w+)\)/); code=code?code[1]:'SP';
       return {l:a[0].replace(/ \(.*/,''), v:a[1].m.spend, c:DONUT_COLORS[code]||'#94a3b8'};
     }))+'</div>';
+  h+='<div class="c12 card glass"><h3>Total — all ad types</h3>'+
+     fullTable(ag.adTypes,{totalSeg:ag.total})+'</div>';
   h+='<div class="c12 card glass"><h3>Campaign state — all ad types</h3>'+
      fullTable(ag.stateAll,{totalSeg:ag.total})+'</div>';
   h+='<div class="c12 card glass"><h3>Portfolios in scope</h3>'+fullTable(ag.portfolios)+'</div>';
@@ -1459,7 +1461,7 @@ function renderCamps(sc){
     });
   }
   h+='<div class="note">'+(S.cview==='port'
-      ? 'Campaign shares are within their portfolio (each 📁 group sums to 100%); the 📁 row’s own shares are of the whole scope.'
+      ? 'Each portfolio has its own card; campaign shares are within that portfolio (every card sums to 100%).'
       : 'Campaign shares are of the whole selected scope.')+
      ' Per-campaign placements live on the Placements tab. Click any column header to sort or filter.</div>';
   return h;
