@@ -53,7 +53,7 @@ var KEEP_COLUMNS = {
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('PPC Command Center')
+    .setTitle('CAMPAIGN TREE')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
@@ -106,7 +106,41 @@ function getData() {
     }
   }
   out.sheets[SHEETS.kw] = kwRows;
+  out.goals = readGoals_(ss);
   return JSON.stringify(out);
+}
+
+var GOALS_SHEET = 'GOALS';
+var GOAL_KEYS = [['start', 'Start Date'], ['end', 'End Date'],
+  ['spend', 'Goal Spend'], ['orders', 'Goal Orders'], ['units', 'Goal Units'],
+  ['acos', 'Target ACOS'], ['totUnits', 'Total Units Sold'],
+  ['totSales', 'Total Sales']];
+
+function readGoals_(ss) {
+  var sh = ss.getSheetByName(GOALS_SHEET);
+  if (!sh) return null;
+  var v = sh.getRange(2, 1, GOAL_KEYS.length, 2).getValues();
+  var out = {};
+  GOAL_KEYS.forEach(function (k, i) {
+    var x = v[i] ? v[i][1] : '';
+    if (x instanceof Date) x = x.toISOString().slice(0, 10);
+    out[k[0]] = (x === '' ? null : x);
+  });
+  return out;
+}
+
+/** Called by the app's Save button — stores the goal inputs in a GOALS tab
+ *  (created automatically the first time). */
+function saveGoals(obj) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh = ss.getSheetByName(GOALS_SHEET) || ss.insertSheet(GOALS_SHEET);
+  sh.getRange(1, 1, 1, 2).setValues([['Setting', 'Value']]);
+  var rows = GOAL_KEYS.map(function (k) {
+    var v = obj && obj[k[0]] != null ? obj[k[0]] : '';
+    return [k[1], v];
+  });
+  sh.getRange(2, 1, rows.length, 2).setValues(rows);
+  return 'ok';
 }
 
 function project(rowValues, cols) {

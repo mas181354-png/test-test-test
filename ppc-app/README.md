@@ -1,4 +1,4 @@
-# PPC Command Center — Google Sheets web app
+# CAMPAIGN TREE — Google Sheets web app
 
 A light-blue / white glassmorphism web app that runs on top of your Google
 Sheet. The sheet holds only raw data (**Upload SP, Upload SB, Upload SD,
@@ -7,18 +7,27 @@ KW TRACKED**) — every analysis lives in the app:
 - **Aggregates** — totals across all ad types, spend donut, campaign states,
   portfolios in scope, match/target-type mix.
 - **Portfolios** — one row per portfolio with campaign counts by ad type,
-  every metric and its share of the scope.
-- **Campaigns** — grouped by portfolio (📁 rows are portfolio subtotals),
-  spend-sorted, with metrics, ratios and IS/CS/SS/RS/OS/US shares; click ▸ on
-  a campaign to expand its **placements** (fixed order, Adj %, per-placement
-  metrics + within-campaign shares, CAMPAIGN TOTAL row).
+  every metric and its share of the scope, PLUS the **Product Goals & Budget
+  Space** card (start/end dates, goal spend, est. orders/units, target ACOS →
+  Space or over-consume and Profit, exactly like the original sheet, with
+  budget pacing bars) and the **Organic vs Sponsored** card (enter total sales
+  and units → organic split, TACOS vs ACOS, organic:sponsored ratio). Inputs
+  are saved into a GOALS tab that the app creates automatically.
+- **Campaigns** — By Portfolio / All Campaigns toggle. Grouped mode: 📁 rows
+  are portfolio subtotals and each portfolio's campaigns' shares sum to 100%
+  within it. Click ▸ on a campaign to expand its **placements** (fixed order,
+  Adj %, per-placement metrics + within-campaign shares, CAMPAIGN TOTAL row).
+  Click any column header for a Google-Sheets-style menu (sort high→low /
+  low→high, or filter that column with > < = ≥ ≤ ≠). Name columns stay frozen
+  while you scroll horizontally; share cells are colour-shaded.
 - **SP Analysis / SB Analysis / SD Analysis** — the original sheet's analysis
   blocks (placements, match/target types, bidding strategies, Auto-vs-Manual,
   SKC/MKC/SAC/MAC structure, SB ad format, SD targeting, campaign states),
   every table with the full metric set (CTR, CVR, ACOS, CPC, ROAS, AOV, CPA)
   AND the IS/CS/SS/RS/OS/US share columns.
-- **Targets** — spend-sorted targets with match type (Exact / Phrase / Broad /
-  ASIN / ASIN Expanded / Category / Auto), the
+- **Targets** — All / Keywords / ASIN·PT quick filter, spend-sorted targets
+  with match type (Exact / Phrase / Broad / ASIN / ASIN Expanded / Category /
+  Auto), the
   `Campaign | Ad group | Target` state line, shares, and the **keyword rank
   heatmap** toggle (SV / KW SALE / daily ranks from KW TRACKED, newest day on
   the left, the same colour buckets as the old sheet).

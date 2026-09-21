@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PPC Command Center</title>
+<title>CAMPAIGN TREE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -136,6 +136,38 @@ th.hmh{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;padding
 .mini{width:100%;font-size:11.5px}
 .mini td,.mini th{padding:5px 7px}
 .mini th{position:static;border-radius:0}
+/* sticky frozen columns */
+th.fz,td.fz{position:sticky;z-index:6}
+td.fz{background:#f4f9ff}
+tr.grp td.fz{background:#dbe9fd}
+tr.sub td.fz{background:#eaf4fe}
+tr.tot td.fz{background:#dbeafe}
+thead th.fz{z-index:8}
+/* header column menu */
+#colmenu{position:fixed;z-index:200;min-width:210px;padding:10px;display:none}
+#colmenu button{display:block;width:100%;text-align:left;border:0;background:transparent;
+  padding:7px 9px;border-radius:8px;font:600 12px 'Inter';color:var(--ink);cursor:pointer}
+#colmenu button:hover{background:rgba(219,234,254,.6)}
+#colmenu .cond{display:flex;gap:6px;margin-top:8px}
+#colmenu .cond select,#colmenu .cond input{border:1px solid #dbeafe;border-radius:7px;
+  padding:5px 7px;font:12px 'Inter';width:70px;background:#fff}
+#colmenu .cond button{width:auto;background:var(--blue);color:#fff;padding:5px 12px}
+/* segmented toggle + class chips */
+.seg{display:flex;background:rgba(219,234,254,.6);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;padding:6px 12px;border-radius:8px;cursor:pointer;
+  font:600 11.5px 'Inter';color:var(--ink)}
+.seg button.on{background:#fff;color:var(--blue);box-shadow:0 1px 5px rgba(37,99,235,.2)}
+/* goals card */
+.ginputs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.ginputs label{font:700 9.5px 'Inter';letter-spacing:.07em;text-transform:uppercase;color:var(--mut);display:block}
+.ginputs input{width:100%;margin-top:3px;border:1px solid #bfdbfe;background:#fff;border-radius:8px;
+  padding:7px 9px;font:600 12.5px 'Inter';color:var(--ink)}
+.gtable td,.gtable th{padding:6px 9px}
+.pos{color:#15803d;font-weight:700}.neg{color:#b91c1c;font-weight:700}
+.obar{display:flex;height:22px;border-radius:8px;overflow:hidden;font:700 10.5px 'Inter';color:#fff;margin:6px 0}
+.obar div{display:flex;align-items:center;justify-content:center;min-width:34px}
+.banner{background:rgba(254,243,199,.8);border:1px solid #fcd34d;color:#92400e;border-radius:10px;
+  padding:9px 13px;font:600 11.5px 'Inter';margin-bottom:10px}
 #load{display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;height:60vh}
 .spin{width:44px;height:44px;border-radius:50%;border:4px solid #dbeafe;border-top-color:var(--blue);
   animation:sp 1s linear infinite}
@@ -146,7 +178,7 @@ th.hmh{writing-mode:vertical-rl;transform:rotate(180deg);text-align:left;padding
 <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
 <div class="wrap">
   <header class="glass">
-    <div class="logo"><div class="dot">◈</div>PPC Command Center</div>
+    <div class="logo"><div class="dot">◈</div>CAMPAIGN TREE</div>
     <nav id="nav">
       <button data-tab="agg" class="on">Aggregates</button>
       <button data-tab="ports">Portfolios</button>
@@ -458,7 +490,7 @@ var Engine = (function () {
       if (r.r < 5) return;
       var k = str(r.v[0]);
       if (!k || k === ' ') return;
-      var lk = k.toLowerCase();
+      var lk = k.toLowerCase().replace(/\s+/g, ' ');
       if (kw.map[lk]) return;                    // first match wins
       kw.map[lk] = { kw: k, sv: r.v[1], sales: r.v[2], ranks: r.v.slice(3, 37) };
     });
@@ -548,7 +580,7 @@ var Engine = (function () {
       var t = x.t;
       var hm = null;
       if (kwModel && t.target) {
-        var rec = kwModel.map[String(t.target).trim().toLowerCase()];
+        var rec = kwModel.map[String(t.target).trim().toLowerCase().replace(/\s+/g, ' ')];
         hm = rec ? { sv: rec.sv, sales: rec.sales, ranks: kwModel.days.map(function (d) {
           var v = rec.ranks[d.col - 3];
           return (v === null || v === undefined) ? '' : v;
@@ -696,18 +728,18 @@ if (typeof module !== 'undefined' && module.exports) module.exports = Engine;
 var S = {
   raw:null, model:null, tab:'agg',
   selPorts:[], selKeys:[],
-  cf:[], tf:[], csearch:'', tsearch:'',
+  cf:[], tf:[], csearch:'', tsearch:'', cview:'port', tclass:'all', goals:null,
   csort:{k:'spend',dir:-1}, tsort:{k:'spend',dir:-1},
   heat:false, open:{}
 };
 try{
   var saved = JSON.parse(localStorage.getItem('ppcApp')||'{}');
-  ['tab','selPorts','selKeys','heat'].forEach(function(k){ if(saved[k]!==undefined) S[k]=saved[k]; });
+  ['tab','selPorts','selKeys','heat','cview','tclass'].forEach(function(k){ if(saved[k]!==undefined) S[k]=saved[k]; });
   if(S.tab==='dash') S.tab='agg';
 }catch(e){}
 function persist(){
   try{ localStorage.setItem('ppcApp', JSON.stringify(
-    {tab:S.tab, selPorts:S.selPorts, selKeys:S.selKeys, heat:S.heat})); }catch(e){}
+    {tab:S.tab, selPorts:S.selPorts, selKeys:S.selKeys, heat:S.heat, cview:S.cview, tclass:S.tclass})); }catch(e){}
 }
 
 /* ---------------- formatting ---------------- */
@@ -723,9 +755,14 @@ function stChip(s){
 }
 
 /* ---------------- data load ---------------- */
+var GOAL_DEFAULTS = {start:'', end:'', spend:null, orders:null, units:null,
+                     acos:null, totUnits:null, totSales:null};
 function onData(json){
   var payload = (typeof json==='string')?JSON.parse(json):json;
   S.raw = payload.sheets||payload;
+  var g = payload.goals;
+  if (!g){ try{ g = JSON.parse(localStorage.getItem('ppcGoals')||'null'); }catch(e){} }
+  S.goals = g || JSON.parse(JSON.stringify(GOAL_DEFAULTS));
   S.model = Engine.parse(S.raw);
   // drop stale selections
   S.selPorts = S.selPorts.filter(function(p){ return S.model.portfolios.indexOf(p)>=0; });
@@ -821,6 +858,63 @@ document.querySelectorAll('#nav button').forEach(function(b){
   b.classList.toggle('on', b.getAttribute('data-tab')===S.tab);
 });
 
+/* ---------------- share heat shading ---------------- */
+function shBg(v){
+  if (v===null||v===undefined) return '';
+  var i = Math.max(0, Math.min(1, v));
+  var a = (0.05 + 0.75*i).toFixed(3);
+  return ' style="background:rgba(37,99,235,'+a+');color:'+(i>0.5?'#fff':'#0f2c5f')+'"';
+}
+
+/* ---------------- Google-Sheets-like header menu ---------------- */
+var MENU = {key:null, ctx:null, label:''};
+function ensureMenu(){
+  var m = document.getElementById('colmenu');
+  if (m) return m;
+  m = document.createElement('div');
+  m.id='colmenu'; m.className='glass';
+  document.body.appendChild(m);
+  document.addEventListener('click', function(e){
+    if (!e.target.closest('#colmenu') && !e.target.closest('th[data-k]')) m.style.display='none';
+  });
+  return m;
+}
+function openColMenu(th, key, label, ctx){
+  var m = ensureMenu();
+  MENU.key=key; MENU.ctx=ctx; MENU.label=label;
+  m.innerHTML = '<button data-a="desc">↓&nbsp; Sort high → low</button>'+
+    '<button data-a="asc">↑&nbsp; Sort low → high</button>'+
+    '<div class="cond"><select id="cmOp"><option>&gt;</option><option>&lt;</option><option>=</option>'+
+    '<option>≥</option><option>≤</option><option>≠</option></select>'+
+    '<input id="cmVal" type="number" step="any" placeholder="value">'+
+    '<button data-a="apply">Filter</button></div>'+
+    '<button data-a="clear" style="margin-top:6px;color:#b91c1c">✕&nbsp; Clear filters on '+esc(label)+'</button>';
+  var r = th.getBoundingClientRect();
+  m.style.display='block';
+  m.style.left = Math.min(r.left, window.innerWidth-240)+'px';
+  m.style.top = (r.bottom+4)+'px';
+  m.querySelectorAll('button[data-a]').forEach(function(b){
+    b.onclick=function(ev){
+      ev.stopPropagation();
+      var a=this.getAttribute('data-a');
+      var sort = MENU.ctx==='c'?S.csort:S.tsort;
+      var filters = MENU.ctx==='c'?S.cf:S.tf;
+      if (a==='desc'||a==='asc'){
+        if (MENU.ctx==='c') S.csort={k:MENU.key,dir:a==='desc'?-1:1};
+        else S.tsort={k:MENU.key,dir:a==='desc'?-1:1};
+      } else if (a==='apply'){
+        var v = parseFloat(document.getElementById('cmVal').value);
+        if (isNaN(v)) return;
+        filters.push({k:MENU.key, op:document.getElementById('cmOp').value, v:v, label:MENU.label});
+      } else if (a==='clear'){
+        var keep = filters.filter(function(f){return f.k!==MENU.key;});
+        filters.length=0; keep.forEach(function(f){filters.push(f);});
+      }
+      m.style.display='none'; render();
+    };
+  });
+}
+
 /* ---------------- shared table pieces ---------------- */
 var MCOLS = [
   ['impr','Impr',fi,'m'],['clicks','Clicks',fi,'m'],['ctr','CTR',fp,'d'],
@@ -897,11 +991,13 @@ function wireFbar(id, filters, cols, onChange, onSearch, onHeat){
   var h=el.querySelector('.heat');
   if (h) h.onchange=function(){ onHeat(this.checked); };
 }
-function thRow(cols, sort, extra){
+function thRow(cols, sort, extra, fz){
   var h='';
   cols.forEach(function(c){
     var arr = sort.k===c[0] ? ' <span class="arr">'+(sort.dir<0?'▼':'▲')+'</span>':'';
-    h+='<th data-k="'+c[0]+'" class="'+(c[3]==='l'?'l':'')+'">'+c[1]+arr+'</th>';
+    var cls = (c[3]==='l'?'l ':'') + ((fz && fz[c[0]]) ? fz[c[0]] : '');
+    var st = (fz && fz[c[0]+'_st']) ? ' style="'+fz[c[0]+'_st']+'"' : '';
+    h+='<th data-k="'+c[0]+'" data-l="'+esc(c[1])+'" class="'+cls+'"'+st+'>'+c[1]+arr+'</th>';
   });
   return h+(extra||'');
 }
@@ -915,7 +1011,7 @@ function fullCells(n, m, d, sh){
     '</td><td>'+fp(d.cvr)+'</td><td>'+fp(d.acos)+'</td><td>'+fc(d.cpc)+'</td><td>'+fx(d.roas)+
     '</td><td>'+fc(d.aov)+'</td><td>'+fc(d.cpa)+'</td>';
   ['is','cs','ss','rs','os','us'].forEach(function(k){
-    h += '<td>'+(sh?fp(sh[k]):'')+'</td>';
+    h += '<td'+(sh?shBg(sh[k]):'')+'>'+(sh?fp(sh[k]):'')+'</td>';
   });
   return h;
 }
@@ -1006,13 +1102,134 @@ function renderAgg(sc){
 }
 
 /* ================= PORTFOLIOS ================= */
+function gnum(x){ var f = parseFloat(x); return isNaN(f)?null:f; }
+function goalsCalc(sc){
+  var g = S.goals || {};
+  var t = Engine.totalM(sc.campaigns);
+  var d = Engine.derived(t);
+  var out = {t:t, d:d};
+  out.spend=gnum(g.spend); out.orders=gnum(g.orders); out.units=gnum(g.units);
+  out.acos=gnum(g.acos); if (out.acos!==null && out.acos>1) out.acos=out.acos/100;
+  out.totU=gnum(g.totUnits); out.totS=gnum(g.totSales);
+  var sd = g.start? new Date(g.start):null, ed = g.end? new Date(g.end):null;
+  out.days = (sd&&ed&&!isNaN(sd)&&!isNaN(ed)) ? Math.round((ed-sd)/86400000)+1 : null;
+  if (sd && !isNaN(sd) && out.days){
+    var el = Math.floor((new Date() - sd)/86400000)+1;
+    out.elapsed = Math.max(0, Math.min(out.days, el));
+  }
+  out.spSpace = out.spend!==null? out.spend - t.spend : null;      // = L11-L9
+  out.orSpace = out.orders!==null? out.orders - t.orders : null;   // = N11-N9
+  out.unSpace = out.units!==null? out.units - t.units : null;      // = O11-O9
+  out.acSpace = (out.acos!==null && d.acos!==null)? out.acos - d.acos : null; // = Q11-Q9
+  out.profit = (out.acSpace!==null)? out.acSpace * t.sales : null; // = Q12 × sales
+  return out;
+}
+function gcell(v, fmt, signed){
+  if (v===null||v===undefined||v==='') return '<td>—</td>';
+  var cls = signed? (v>=0?'pos':'neg') : '';
+  return '<td class="'+cls+'">'+fmt(v)+'</td>';
+}
+function goalsCard(sc){
+  var G = S.goals||{}, C = goalsCalc(sc);
+  var h='<div class="c6 card glass"><h3>Product goals & budget space</h3><div class="ginputs">';
+  [['start','Start Date','date'],['end','End Date','date'],
+   ['spend','Goal Spend £','number'],['orders','Est. Orders','number'],
+   ['units','Est. Units','number'],['acos','Target ACOS %','number']
+  ].forEach(function(f){
+    var val = G[f[0]]==null?'':G[f[0]];
+    if (f[0]==='acos' && val!=='' && parseFloat(val)<=1) val = Math.round(parseFloat(val)*1000)/10;
+    h+='<div><label>'+f[1]+'</label><input data-g="'+f[0]+'" type="'+f[2]+'" step="any" value="'+esc(val)+'"></div>';
+  });
+  h+='<div style="align-self:end"><button class="hbtn" id="gsave">💾 Save goals</button></div></div>';
+  h+='<div class="tblwrap"><table class="mini gtable"><tr><th class="l" style="text-align:left"></th><th>Spend</th><th>Orders</th><th>Units</th><th>ACOS</th></tr>';
+  h+='<tr><td class="l">Product Goals</td>'+gcell(C.spend,fc)+gcell(C.orders,fi)+gcell(C.units,fi)+gcell(C.acos,fp)+'</tr>';
+  h+='<tr><td class="l">Actual (scope)</td><td>'+fc(C.t.spend)+'</td><td>'+fi(C.t.orders)+'</td><td>'+fi(C.t.units)+'</td><td>'+fp(C.d.acos)+'</td></tr>';
+  h+='<tr><td class="l">Space or over-consume</td>'+gcell(C.spSpace,fc,true)+gcell(C.orSpace,fi,true)+gcell(C.unSpace,fi,true)+gcell(C.acSpace,fp,true)+'</tr>';
+  h+='<tr class="tot"><td class="l">Profit (ACOS space × Sales)</td><td colspan="3"></td>'+gcell(C.profit,fc,true)+'</tr></table></div>';
+  if (C.days){
+    h+='<div class="note" style="margin-top:10px">Days: <b>'+C.days+'</b>'+
+       (C.elapsed!=null? ' · elapsed '+C.elapsed:'')+
+       (C.spend!==null? ' · budget/day '+fc(C.spend/C.days):'')+
+       (C.elapsed? ' · actual/day '+fc(C.t.spend/Math.max(1,C.elapsed))+
+         ' · projected '+fc(C.t.spend/Math.max(1,C.elapsed)*C.days):'')+'</div>';
+    if (C.spend){
+      var used = Math.min(1, C.t.spend/C.spend), time = C.elapsed? Math.min(1, C.elapsed/C.days):null;
+      h+='<div class="bar"><div class="lb">Budget used</div><div class="tr"><div class="fl" style="width:'+(used*100)+'%"></div></div><div class="vl">'+fp(used)+'</div></div>';
+      if (time!==null)
+        h+='<div class="bar"><div class="lb">Period elapsed</div><div class="tr"><div class="fl" style="width:'+(time*100)+'%;background:linear-gradient(90deg,#94a3b8,#cbd5e1)"></div></div><div class="vl">'+fp(time)+'</div></div>';
+    }
+  }
+  h+='</div>';
+  return h;
+}
+function organicCard(sc){
+  var G = S.goals||{}, C = goalsCalc(sc);
+  var h='<div class="c6 card glass"><h3>Organic vs Sponsored</h3><div class="ginputs">';
+  [['totSales','Total Sales £ (all channels)','number'],['totUnits','Total Units Sold','number']].forEach(function(f){
+    var val = G[f[0]]==null?'':G[f[0]];
+    h+='<div><label>'+f[1]+'</label><input data-g="'+f[0]+'" type="number" step="any" value="'+esc(val)+'"></div>';
+  });
+  h+='<div style="align-self:end"><button class="hbtn" id="gsave2">💾 Save</button></div></div>';
+  if (C.totS===null && C.totU===null){
+    h+='<div class="note">Enter the product’s TOTAL sales and units (organic + sponsored) for the same date window and the split is calculated here.</div></div>';
+    return h;
+  }
+  function split(label, tot, spons, fmt){
+    if (tot===null) return '';
+    var org = tot - spons, sShare = tot? spons/tot : 0, oShare = tot? Math.max(0,org)/tot : 0;
+    var hh='<div style="margin-top:10px;font:700 11px Inter;color:#334155">'+label+'</div>'+
+      '<div class="obar"><div style="flex:'+Math.max(0.06,sShare)+';background:linear-gradient(90deg,#2563eb,#0ea5e9)">Sponsored '+fmt(spons)+' ('+fp(sShare)+')</div>'+
+      '<div style="flex:'+Math.max(0.06,oShare)+';background:linear-gradient(90deg,#10b981,#34d399)">Organic '+fmt(org)+' ('+fp(tot?org/tot:null)+')</div></div>';
+    return hh;
+  }
+  h+=split('SALES', C.totS, C.t.sales, fc);
+  h+=split('UNITS', C.totU, C.t.units, fi);
+  h+='<div class="tblwrap" style="margin-top:10px"><table class="mini">';
+  h+='<tr><th class="l" style="text-align:left">Metric</th><th>Value</th><th class="l" style="text-align:left">Meaning</th></tr>';
+  if (C.totS!==null){
+    h+='<tr><td class="l">TACOS</td><td>'+fp(C.t.spend/C.totS)+'</td><td class="l dim">Ad spend ÷ total sales</td></tr>';
+    h+='<tr><td class="l">ACOS (sponsored)</td><td>'+fp(C.d.acos)+'</td><td class="l dim">Ad spend ÷ ad sales</td></tr>';
+    h+='<tr><td class="l">Organic sales</td><td>'+fc(C.totS - C.t.sales)+'</td><td class="l dim">Total − sponsored</td></tr>';
+    h+='<tr><td class="l">Organic : Sponsored</td><td>'+(C.t.sales? ((C.totS-C.t.sales)/C.t.sales).toFixed(2)+' : 1':'—')+'</td><td class="l dim">Sales ratio</td></tr>';
+  }
+  if (C.totU!==null){
+    h+='<tr><td class="l">Organic units</td><td>'+fi(C.totU - C.t.units)+'</td><td class="l dim">Total − sponsored</td></tr>';
+    h+='<tr><td class="l">Sponsored unit share</td><td>'+fp(C.totU? C.t.units/C.totU:null)+'</td><td class="l dim">Ad units ÷ total units</td></tr>';
+  }
+  h+='</table></div></div>';
+  return h;
+}
+function wireGoals(v){
+  v.querySelectorAll('input[data-g]').forEach(function(inp){
+    inp.onchange=function(){
+      var k=this.getAttribute('data-g');
+      var val=this.value===''?null:this.value;
+      if (k==='acos' && val!==null){ var f=parseFloat(val); if(!isNaN(f)&&f>1) val=f/100; }
+      if (['spend','orders','units','totUnits','totSales'].indexOf(k)>=0 && val!==null){
+        var f2=parseFloat(val); val=isNaN(f2)?null:f2;
+      }
+      S.goals[k]=val; render();
+    };
+  });
+  function save(){
+    try{ localStorage.setItem('ppcGoals', JSON.stringify(S.goals)); }catch(e){}
+    if (window.google && google.script && google.script.run){
+      google.script.run.withSuccessHandler(function(){
+        document.getElementById('stamp').textContent='Goals saved '+new Date().toLocaleTimeString();
+      }).saveGoals(S.goals);
+    }
+  }
+  var b1=document.getElementById('gsave'), b2=document.getElementById('gsave2');
+  if(b1) b1.onclick=save; if(b2) b2.onclick=save;
+}
 function renderPorts(sc){
   var pr = Engine.portfolioRows(sc);
   var h = kpiRow({m:pr.total, d:pr.totalD});
-  h+='<div class="tblwrap glass"><table><thead><tr><th class="l">Portfolio</th><th class="l">Campaigns</th>';
+  h += '<div class="grid" style="margin-bottom:14px">'+goalsCard(sc)+organicCard(sc)+'</div>';
+  h+='<div class="tblwrap glass"><table><thead><tr><th class="l fz" style="left:0;min-width:280px;max-width:360px">Portfolio</th><th class="l">Campaigns</th>';
   FULLH.forEach(function(x){ h+='<th>'+x+'</th>'; });
   h+='</tr></thead><tbody>';
-  h+='<tr class="tot"><td class="l">TOTAL — scope</td><td class="l"></td>'+
+  h+='<tr class="tot"><td class="l fz" style="left:0;min-width:280px;max-width:360px">TOTAL — scope</td><td class="l"></td>'+
      fullCells(null, pr.total, pr.totalD, Engine.shares(pr.total, pr.total))+'</tr>';
   pr.rows.forEach(function(p){
     var chips = Object.keys(p.srcs).map(function(f){
@@ -1021,12 +1238,12 @@ function renderPorts(sc){
     var states = Object.keys(p.states).map(function(st){
       return p.states[st]+' '+st;
     }).join(' · ');
-    h+='<tr><td class="l"><span class="campname" title="'+esc(p.port)+'">'+esc(p.port)+'</span>'+
+    h+='<tr><td class="l fz" style="left:0;min-width:280px;max-width:360px"><span class="campname" title="'+esc(p.port)+'">'+esc(p.port)+'</span>'+
        '<span class="dim">'+esc(states)+'</span></td>'+
        '<td class="l">'+chips+'</td>'+fullCells(p.n, p.m, p.d, p.sh)+'</tr>';
   });
   h+='</tbody></table></div>';
-  h+='<div class="note">Shares are each portfolio’s share of the selected scope. Open the Campaigns tab to see each portfolio’s campaigns and placements.</div>';
+  h+='<div class="note">Shares are each portfolio’s share of the selected scope. Goals, dates and totals are saved into a GOALS tab in the spreadsheet.</div>';
   return h;
 }
 
@@ -1090,63 +1307,80 @@ function renderCamps(sc){
   var cr = Engine.campaignRows(sc);
   var rows = applyFilters(cr.rows, S.cf, S.csearch, function(r){ return r.name+' '+r.port; });
   rows = sortRows(rows, S.csort);
-  // group by portfolio, groups ordered by portfolio spend (desc)
-  var groups = {}, order = [];
-  rows.forEach(function(r){
-    if (!groups[r.port]){ groups[r.port]=[]; order.push(r.port); }
-    groups[r.port].push(r);
-  });
-  var gm = {};
-  order.forEach(function(p){
-    var m={impr:0,clicks:0,spend:0,sales:0,orders:0,units:0};
-    groups[p].forEach(function(r){ Engine.M6.forEach(function(k){ m[k]+=r.m[k]; }); });
-    gm[p]=m;
-  });
-  order.sort(function(a,b){ return gm[b].spend-gm[a].spend; });
+  var FZ = {name:'fz', name_st:'left:88px;min-width:280px;max-width:360px'};
   var h = fbarHTML('cfbar', CFCOLS, S.cf, S.csearch, false);
-  h+='<div class="tblwrap glass"><table><thead><tr><th></th><th class="l">Type</th>'+
-     thRow(CCOLS,S.csort)+'</tr></thead><tbody>';
-  var t=cr.total, td=cr.totalD;
-  h+='<tr class="tot"><td></td><td class="l">'+rows.length+' campaigns</td><td class="l">TOTAL — scope</td><td></td><td></td>'+
-     '<td>'+fi(t.impr)+'</td><td>'+fi(t.clicks)+'</td><td>'+fp(td.ctr)+'</td><td>'+fc(t.spend)+'</td><td>'+fc(t.sales)+
-     '</td><td>'+fi(t.orders)+'</td><td>'+fi(t.units)+'</td><td>'+fp(td.cvr)+'</td><td>'+fp(td.acos)+'</td><td>'+fc(td.cpc)+
-     '</td><td>'+fx(td.roas)+'</td><td>'+fc(td.aov)+'</td><td colspan="6"></td></tr>';
-  order.forEach(function(port){
-    var m=gm[port], d=Engine.derived(m), sh=Engine.shares(m, t);
-    h+='<tr class="grp"><td></td><td class="l">'+groups[port].length+'</td>'+
-       '<td class="l"><span class="campname" title="'+esc(port)+'">📁 '+esc(port)+'</span></td><td></td><td></td>'+
-       '<td>'+fi(m.impr)+'</td><td>'+fi(m.clicks)+'</td><td>'+fp(d.ctr)+'</td><td>'+fc(m.spend)+'</td><td>'+fc(m.sales)+
-       '</td><td>'+fi(m.orders)+'</td><td>'+fi(m.units)+'</td><td>'+fp(d.cvr)+'</td><td>'+fp(d.acos)+'</td><td>'+fc(d.cpc)+
-       '</td><td>'+fx(d.roas)+'</td><td>'+fc(d.aov)+'</td>';
-    ['is','cs','ss','rs','os','us'].forEach(function(k){ h+='<td>'+fp(sh[k])+'</td>'; });
-    h+='</tr>';
-    groups[port].forEach(function(r){
-      var open = S.open[r.key];
-      h+='<tr><td class="exp" data-k="'+esc(r.key)+'">'+(r.places.length?(open?'▾':'▸'):'')+'</td>'+
-         '<td class="l"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
-         '<td class="l"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
-         '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
-      MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
-      SHCOLS.forEach(function(sx){ h+='<td>'+fp(r.sh[sx[0]])+'</td>'; });
-      h+='</tr>';
-      if (open && r.places.length){
-        r.places.forEach(function(p){
-          h+='<tr class="sub"><td></td><td></td><td class="l pl">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
-          MCOLS.forEach(function(c){
-            var v = (c[3]==='m')?p.m[c[0]]:p.d[c[0]];
-            h+='<td>'+c[2](v)+'</td>';
-          });
-          SHCOLS.forEach(function(sx){ h+='<td>'+fp(p.sh[sx[0]])+'</td>'; });
-          h+='</tr>';
+  // view toggle injected into the filter bar after render (see render())
+  h = h.replace('</div>', '<span class="spacer"></span>'+
+    '<div class="seg" id="cviewSeg"><button data-v="port" class="'+(S.cview==='port'?'on':'')+'">By Portfolio</button>'+
+    '<button data-v="flat" class="'+(S.cview==='flat'?'on':'')+'">All Campaigns</button></div>'+
+    '<span class="dim">'+rows.length+' campaigns</span></div>');
+  h+='<div class="tblwrap glass"><table><thead><tr>'+
+     '<th class="fz" style="left:0;width:26px"></th>'+
+     '<th class="l fz" style="left:26px;width:62px">Type</th>'+
+     thRow(CCOLS,S.csort,'',FZ)+'</tr></thead><tbody>';
+
+  function campRow(r, shOwn){
+    var open = S.open[r.key];
+    var hh='<tr><td class="exp fz" style="left:0" data-k="'+esc(r.key)+'">'+(r.places.length?(open?'▾':'▸'):'')+'</td>'+
+       '<td class="l fz" style="left:26px"><span class="chip '+r.fmt+'">'+r.fmt+'</span></td>'+
+       '<td class="l fz" style="left:88px;min-width:280px;max-width:360px"><span class="campname" title="'+esc(r.name)+'">'+esc(r.name)+'</span><span class="dim">'+esc(r.port)+'</span></td>'+
+       '<td class="l">'+stChip(r.state)+'</td><td>'+fc(r.budget)+'</td>';
+    MCOLS.forEach(function(c){ hh+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
+    SHCOLS.forEach(function(sx){ hh+='<td'+shBg(shOwn[sx[0]])+'>'+fp(shOwn[sx[0]])+'</td>'; });
+    hh+='</tr>';
+    if (open && r.places.length){
+      r.places.forEach(function(p){
+        hh+='<tr class="sub"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
+            '<td class="l pl fz" style="left:88px;min-width:280px;max-width:360px">'+esc(p.label)+'</td><td class="l">Adj '+(p.pct||0)+'%</td><td></td>';
+        MCOLS.forEach(function(c){
+          var v = (c[3]==='m')?p.m[c[0]]:p.d[c[0]];
+          hh+='<td>'+c[2](v)+'</td>';
         });
-        h+='<tr class="sub tot2"><td></td><td></td><td class="l pl">CAMPAIGN TOTAL</td><td></td><td></td>';
-        MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
-        h+='<td colspan="6"></td></tr>';
-      }
+        SHCOLS.forEach(function(sx){ hh+='<td'+shBg(p.sh[sx[0]])+'>'+fp(p.sh[sx[0]])+'</td>'; });
+        hh+='</tr>';
+      });
+      hh+='<tr class="sub tot2"><td class="fz" style="left:0"></td><td class="fz" style="left:26px"></td>'+
+          '<td class="l pl fz" style="left:88px;min-width:280px;max-width:360px">CAMPAIGN TOTAL</td><td></td><td></td>';
+      MCOLS.forEach(function(c){ hh+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
+      hh+='<td colspan="6"></td></tr>';
+    }
+    return hh;
+  }
+
+  if (S.cview === 'flat'){
+    rows.forEach(function(r){ h += campRow(r, r.sh); });
+  } else {
+    var groups = {}, order = [];
+    rows.forEach(function(r){
+      if (!groups[r.port]){ groups[r.port]=[]; order.push(r.port); }
+      groups[r.port].push(r);
     });
-  });
+    var gm = {};
+    order.forEach(function(p){
+      var m={impr:0,clicks:0,spend:0,sales:0,orders:0,units:0};
+      groups[p].forEach(function(r){ Engine.M6.forEach(function(k){ m[k]+=r.m[k]; }); });
+      gm[p]=m;
+    });
+    order.sort(function(a,b){ return gm[b].spend-gm[a].spend; });
+    order.forEach(function(port){
+      var m=gm[port], d=Engine.derived(m), sh=Engine.shares(m, cr.total);
+      h+='<tr class="grp"><td class="fz" style="left:0"></td><td class="l fz" style="left:26px">'+groups[port].length+'</td>'+
+         '<td class="l fz" style="left:88px;min-width:280px;max-width:360px"><span class="campname" title="'+esc(port)+'">📁 '+esc(port)+'</span></td><td></td><td></td>'+
+         '<td>'+fi(m.impr)+'</td><td>'+fi(m.clicks)+'</td><td>'+fp(d.ctr)+'</td><td>'+fc(m.spend)+'</td><td>'+fc(m.sales)+
+         '</td><td>'+fi(m.orders)+'</td><td>'+fi(m.units)+'</td><td>'+fp(d.cvr)+'</td><td>'+fp(d.acos)+'</td><td>'+fc(d.cpc)+
+         '</td><td>'+fx(d.roas)+'</td><td>'+fc(d.aov)+'</td>';
+      ['is','cs','ss','rs','os','us'].forEach(function(k){ h+='<td'+shBg(sh[k])+'>'+fp(sh[k])+'</td>'; });
+      h+='</tr>';
+      groups[port].forEach(function(r){
+        h += campRow(r, Engine.shares(r.m, m));   // shares WITHIN the portfolio
+      });
+    });
+  }
   h+='</tbody></table></div>';
-  h+='<div class="note">Campaigns are grouped by portfolio (📁 rows = portfolio totals; their shares are of the whole scope). Campaign shares are of the scope total; placement shares are within their campaign. Amazon Business is a B2B subset of the other three SP placements.</div>';
+  h+='<div class="note">'+(S.cview==='port'
+      ? 'Campaign shares are within their portfolio (each 📁 group sums to 100%); the 📁 row’s own shares are of the whole scope.'
+      : 'Campaign shares are of the whole selected scope.')+
+     ' Placement shares are within their campaign. Click any column header to sort or filter it. Amazon Business is a B2B subset of the other three SP placements.</div>';
   return h;
 }
 
@@ -1156,11 +1390,34 @@ var TCOLS=[['target','Target',null,'l'],['match','Match',null,'l'],['bid','Bid',
 var TFCOLS=[['bid','Bid']].concat(MCOLS.map(function(c){return [c[0],c[1]];})).concat(SHCOLS);
 function renderTgts(sc){
   var tr = Engine.targetRows(sc, S.model.kw);
-  var rows = applyFilters(tr.rows, S.tf, S.tsearch,
+  var KWM = {Exact:1, Phrase:1, Broad:1};
+  var rows = tr.rows.filter(function(r){
+    if (S.tclass==='kw') return KWM[r.match];
+    if (S.tclass==='pt') return !KWM[r.match];
+    return true;
+  });
+  rows = applyFilters(rows, S.tf, S.tsearch,
     function(r){ return r.target+' '+r.camp+' '+r.match; });
   rows = sortRows(rows, S.tsort);
   var days = S.model.kw.days;
+  var FZ = {target:'fz', target_st:'left:62px;min-width:300px;max-width:420px'};
   var h = fbarHTML('tfbar', TFCOLS, S.tf, S.tsearch, true);
+  h = h.replace('<select class="fcol">',
+    '<div class="seg" id="tclassSeg">'+
+    '<button data-v="all" class="'+(S.tclass==='all'?'on':'')+'">All</button>'+
+    '<button data-v="kw" class="'+(S.tclass==='kw'?'on':'')+'">Keywords</button>'+
+    '<button data-v="pt" class="'+(S.tclass==='pt'?'on':'')+'">ASIN / PT</button></div>'+
+    '<select class="fcol">');
+  if (S.heat){
+    var nHit = rows.filter(function(r){ return r.hm && r.hm!=='NF'; }).length;
+    if (!nHit){
+      var samples = Object.keys(S.model.kw.map).slice(0,3).map(function(k){
+        return '“'+S.model.kw.map[k].kw+'”'; }).join(', ');
+      h += '<div class="banner">⚠ None of the current targets were found in KW TRACKED, so every rank shows NF. '+
+        (samples? 'KW TRACKED currently tracks keywords like '+esc(samples)+' — paste THIS product’s tracked keywords into the KW TRACKED tab (keywords in column A from row 5, dates in row 3) and hit Refresh.'
+                : 'The KW TRACKED tab is empty — paste your rank-tracking data there (keywords in column A from row 5, dates in row 3) and hit Refresh.')+'</div>';
+    }
+  }
   var hmHead='';
   if (S.heat){
     hmHead='<th>SV</th><th>KW Sale</th>'+days.map(function(d){
@@ -1169,20 +1426,21 @@ function renderTgts(sc){
       return '<th class="hmh">'+lab+'</th>';
     }).join('');
   }
-  h+='<div class="tblwrap glass"><table><thead><tr><th class="l">Type</th>'+
-     thRow(TCOLS,S.tsort,hmHead)+'</tr></thead><tbody>';
+  h+='<div class="tblwrap glass"><table><thead><tr><th class="l fz" style="left:0;width:62px">Type</th>'+
+     thRow(TCOLS,S.tsort,hmHead,FZ)+'</tr></thead><tbody>';
   var t=tr.total, td=tr.totalD;
-  h+='<tr class="tot"><td class="l">'+rows.length+' targets</td><td class="l">TOTAL — scope</td><td></td><td></td>'+
+  h+='<tr class="tot"><td class="l fz" style="left:0">'+rows.length+' targets</td>'+
+     '<td class="l fz" style="left:62px;min-width:300px;max-width:420px">TOTAL — scope</td><td></td><td></td>'+
      '<td>'+fi(t.impr)+'</td><td>'+fi(t.clicks)+'</td><td>'+fp(td.ctr)+'</td><td>'+fc(t.spend)+'</td><td>'+fc(t.sales)+
      '</td><td>'+fi(t.orders)+'</td><td>'+fi(t.units)+'</td><td>'+fp(td.cvr)+'</td><td>'+fp(td.acos)+'</td><td>'+fc(td.cpc)+
      '</td><td>'+fx(td.roas)+'</td><td>'+fc(td.aov)+'</td><td colspan="'+(6+(S.heat?2+days.length:0))+'"></td></tr>';
   rows.forEach(function(r){
-    h+='<tr><td class="l"><span class="chip '+r.src+'">'+r.src+'</span></td>'+
-       '<td class="l" title="'+esc(r.stateLine)+'"><span class="campname">'+esc(r.target)+'</span>'+
+    h+='<tr><td class="l fz" style="left:0"><span class="chip '+r.src+'">'+r.src+'</span></td>'+
+       '<td class="l fz" style="left:62px;min-width:300px;max-width:420px" title="'+esc(r.stateLine)+'"><span class="campname">'+esc(r.target)+'</span>'+
        '<span class="dim">'+esc(r.camp)+' · '+esc(r.stateLine)+'</span></td>'+
        '<td class="l">'+esc(r.match)+'</td><td>'+fc(r.bid||null)+'</td>';
     MCOLS.forEach(function(c){ h+='<td>'+c[2](valOf(r,c[0]))+'</td>'; });
-    SHCOLS.forEach(function(s){ h+='<td>'+fp(r.sh[s[0]])+'</td>'; });
+    SHCOLS.forEach(function(sx){ h+='<td'+shBg(r.sh[sx[0]])+'>'+fp(r.sh[sx[0]])+'</td>'; });
     if (S.heat){
       if (r.hm && r.hm!=='NF'){
         h+='<td class="hm">'+fi(Engine.num(r.hm.sv))+'</td><td class="hm">'+fi(Engine.num(r.hm.sales))+'</td>';
@@ -1220,18 +1478,26 @@ function render(){
         S.open[k]=!S.open[k]; render(); };
     });
     v.querySelectorAll('th[data-k]').forEach(function(th){
-      th.onclick=function(){ var k=this.getAttribute('data-k');
-        if (S.csort.k===k) S.csort.dir*=-1; else S.csort={k:k,dir:-1};
-        render(); };
+      th.onclick=function(e){ e.stopPropagation();
+        openColMenu(this, this.getAttribute('data-k'), this.getAttribute('data-l')||this.textContent, 'c'); };
+    });
+    var seg = document.getElementById('cviewSeg');
+    if (seg) seg.querySelectorAll('button').forEach(function(b){
+      b.onclick=function(){ S.cview=this.getAttribute('data-v'); persist(); render(); };
     });
   } else if (S.tab==='tgts'){
     wireFbar('tfbar', S.tf, TFCOLS, render, function(q){S.tsearch=q;render();},
       function(on){ S.heat=on; persist(); render(); });
     v.querySelectorAll('th[data-k]').forEach(function(th){
-      th.onclick=function(){ var k=this.getAttribute('data-k');
-        if (S.tsort.k===k) S.tsort.dir*=-1; else S.tsort={k:k,dir:-1};
-        render(); };
+      th.onclick=function(e){ e.stopPropagation();
+        openColMenu(this, this.getAttribute('data-k'), this.getAttribute('data-l')||this.textContent, 't'); };
     });
+    var seg2 = document.getElementById('tclassSeg');
+    if (seg2) seg2.querySelectorAll('button').forEach(function(b){
+      b.onclick=function(){ S.tclass=this.getAttribute('data-v'); persist(); render(); };
+    });
+  } else if (S.tab==='ports'){
+    wireGoals(v);
   }
 }
 load();
